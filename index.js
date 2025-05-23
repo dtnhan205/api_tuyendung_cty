@@ -2,7 +2,8 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const jobRouter = require('./routes/jobRouter');
-const newsRouter = require('./routes/newRouter'); // Thêm dòng này
+const newsRouter = require('./routes/newRouter');
+const profileRouter = require('./routes/profileRouter');
 require('dotenv').config();
 
 // Kiểm tra biến môi trường bắt buộc
@@ -60,7 +61,8 @@ mongoose.connection.on('disconnected', () => console.log('Mongoose đã ngắt k
 
 // Routes
 app.use('/api/job', jobRouter);
-app.use('/api/new', newsRouter); // Thêm tuyến đường cho tin tức
+app.use('/api/new', newsRouter);
+app.use('/api/profile', profileRouter);
 app.use(express.static('public'));
 
 // Xử lý lỗi 404
