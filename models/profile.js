@@ -39,8 +39,8 @@ const profileSchema = new mongoose.Schema({
   status: {
     type: String,
     required: true,
-    enum: ['Đang chờ', 'Đã duyệt', 'Đã từ chối'],
-    default: 'Đang chờ'
+    enum: ['new', 'interview', 'recruitment', 'refuse'],
+    default: 'new'
   },
   gender: {
     type: String,
