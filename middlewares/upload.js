@@ -1,21 +1,46 @@
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
+
+// Ensure the upload directory exists
+const uploadDir = path.join('public', 'images');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
 
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, path.join('public', 'images')); 
+  destination: (req, file, cb) => {
+    cb(null, uploadDir);
   },
-  filename: function (req, file, cb) {
-    const uniqueName = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueName + path.extname(file.originalname)); // Giữ phần mở rộng ảnh
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  },
+});
+
+const checkFile = (req, file, cb) => {
+  const allowedMimeTypes = [
+    'image/jpeg',
+    'image/jpg',
+    'image/png',
+    'image/gif',
+    'image/webp',
+    'image/svg+xml',
+  ];
+  const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'];
+  
+  const extname = allowedExtensions.includes(path.extname(file.originalname).toLowerCase());
+  const mimetype = allowedMimeTypes.includes(file.mimetype);
+
+  if (extname && mimetype) {
+    cb(null, true);
+  } else {
+    cb(new Error('Chỉ hỗ trợ file ảnh (jpg, jpeg, png, gif, webp, svg)'));
   }
-});
+};
 
-const upload = multer({
+module.exports = multer({
   storage,
-  limits: {
-    fileSize: 5 * 1024 * 1024, 
-  },
+  fileFilter: checkFile,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
 });
-
-module.exports = upload;
