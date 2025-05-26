@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const News = require('../models/new');
+const validator = require('validator');
 
 // Get all news (chỉ lấy tin tức có status: 'show')
 exports.getAllNews = async (req, res) => {
@@ -70,8 +71,26 @@ exports.createNews = async (req, res) => {
 // Update a news by ID
 exports.updateNews = async (req, res) => {
   const { id } = req.params;
+  const { contentBlocks } = req.body;
 
   try {
+    // Xác thực contentBlocks
+    if (contentBlocks && Array.isArray(contentBlocks)) {
+      for (const block of contentBlocks) {
+        if (block.type === 'image') {
+          if (!block.url || !validator.isURL(block.url)) {
+            return res.status(400).json({ error: 'URL hình ảnh không hợp lệ' });
+          }
+        } else if (block.type === 'text') {
+          if (!block.content || typeof block.content !== 'string') {
+            return res.status(400).json({ error: 'Nội dung văn bản không hợp lệ' });
+          }
+        } else {
+          return res.status(400).json({ error: 'Loại khối nội dung không hợp lệ' });
+        }
+      }
+    }
+
     const updatedNews = await News.findOneAndUpdate(
       { id }, // Tìm theo id tùy chỉnh
       {
@@ -83,6 +102,7 @@ exports.updateNews = async (req, res) => {
         views: req.body.views,
         rating: req.body.rating,
         status: req.body.status,
+        contentBlocks: req.body.contentBlocks,
       },
       {
         new: true,
@@ -99,7 +119,7 @@ exports.updateNews = async (req, res) => {
       news: updatedNews,
     });
   } catch (err) {
-    console.error(`PUT /api/news/${id} error:`, err);
+    console.error(`PUT /api/new/${id} error:`, err);
     res.status(400).json({ error: err.message });
   }
 };
