@@ -4,10 +4,12 @@ const cors = require('cors');
 const jobRouter = require('./routes/jobRouter');
 const newsRouter = require('./routes/newRouter');
 const profileRouter = require('./routes/profileRouter');
+const adminRouter = require('./routes/adminRouter');
 require('dotenv').config();
 
+
 // Kiểm tra biến môi trường bắt buộc
-const requiredEnv = ['MONGODB_URI', 'PORT'];
+const requiredEnv = ['MONGODB_URI', 'PORT', 'JWT_SECRET'];
 for (const env of requiredEnv) {
   if (!process.env[env]) {
     console.error(`Lỗi: ${env} không được định nghĩa trong .env`);
@@ -63,6 +65,7 @@ mongoose.connection.on('disconnected', () => console.log('Mongoose đã ngắt k
 app.use('/api/job', jobRouter);
 app.use('/api/new', newsRouter);
 app.use('/api/profile', profileRouter);
+app.use('/api/admin', adminRouter);
 app.use(express.static('public'));
 
 // Xử lý lỗi 404

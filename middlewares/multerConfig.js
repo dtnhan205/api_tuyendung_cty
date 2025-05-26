@@ -26,7 +26,7 @@ const checkFile = (req, file, cb) => {
   if (extname && mimetype) {
     return cb(null, true);
   } else {
-    cb(new Error('Bạn chỉ được upload file ảnh (jpg, jpeg, png, gif, webp)'));
+    cb(new Error('Bạn chỉ được upload file ảnh (jpg, jpeg, png, gif, webp)'));  
   }
 };
 
