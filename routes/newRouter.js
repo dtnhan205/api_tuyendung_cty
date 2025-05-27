@@ -1,23 +1,38 @@
 const express = require('express');
 const router = express.Router();
 const newsController = require('../controllers/newController');
+const jwt = require('jsonwebtoken');
+const Admin = require('../models/admin');
 
-// Lấy tất cả tin tức
+// Middleware xác thực admin
+const authAdmin = async (req, res, next) => {
+    const token = req.header('Authorization')?.replace('Bearer ', '');
+    if (!token) {
+        return res.status(401).json({ message: 'Không có token, truy cập bị từ chối' });
+    }
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const admin = await Admin.findOne({ _id: decoded.id, role: 'admin' });
+        if (!admin) {
+            return res.status(401).json({ message: 'Không có quyền admin' });
+        }
+        req.admin = admin;
+        next();
+    } catch (error) {
+        res.status(401).json({ message: 'Token không hợp lệ', error: error.message });
+    }
+};
+
 router.get('/', newsController.getAllNews);
 
-// Lấy tin tức theo ID
 router.get('/:id', newsController.getNewsById);
 
-// Tạo tin tức mới
-router.post('/', newsController.createNews);
+router.post('/', authAdmin, newsController.createNews);
 
-// Cập nhật tin tức
-router.put('/:id', newsController.updateNews);
+router.put('/:id', authAdmin, newsController.updateNews);
 
-// Xóa tin tức
-router.delete('/:id', newsController.deleteNews);
+router.delete('/:id', authAdmin, newsController.deleteNews);
 
-// Chuyển đổi trạng thái hiển thị
-router.put('/:id/toggle-visibility', newsController.toggleNewsVisibility);
+router.put('/:id/toggle-visibility', authAdmin, newsController.toggleNewsVisibility);
 
 module.exports = router;
