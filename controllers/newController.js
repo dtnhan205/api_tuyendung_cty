@@ -224,22 +224,33 @@ exports.deleteNews = async (req, res) => {
 };
 
 // Toggle news visibility (Chuyển đổi giữa hidden và show)
+const mongoose = require('mongoose');
+const News = require('../models/news');
+
+// Toggle news visibility (Chuyển đổi giữa hidden và show)
 exports.toggleNewsVisibility = async (req, res) => {
   const { id } = req.params;
 
   try {
-    const news = await News.findOne({ id });
+    // Sử dụng findById thay vì findOne({ id }) vì id thường là _id trong Mongoose
+    const news = await News.findById(id);
     if (!news) {
       return res.status(404).json({ message: 'Không tìm thấy tin tức' });
     }
 
+    // Chuyển đổi trạng thái
     news.status = news.status === 'show' ? 'hidden' : 'show';
     await news.save();
 
     res.json({
       message: `Tin tức đã được ${news.status === 'show' ? 'hiển thị' : 'ẩn'}`,
-      news,
-    }); 
+      news: {
+        id: news._id, // Trả về _id để đồng bộ với frontend
+        title: news.title,
+        status: news.status,
+        // Thêm các trường khác nếu cần thiết (tùy schema)
+      },
+    });
   } catch (err) {
     console.error(`PUT /api/news/${id}/toggle-visibility error:`, err);
     res.status(500).json({ error: 'Lỗi máy chủ' });
