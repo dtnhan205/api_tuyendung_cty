@@ -1,10 +1,10 @@
 const mongoose = require('mongoose');
 const Job = require('../models/job');
 
-// Get all jobs (chỉ lấy công việc có status: 'show')
+// Get all jobs (bây giờ lấy cả công việc có status: 'hidden' và 'show')
 exports.getAllJobs = async (req, res) => {
   try {
-    const jobs = await Job.find({ status: 'show' });
+    const jobs = await Job.find();
     if (!jobs.length) {
       return res.status(404).json({ message: 'Không tìm thấy công việc nào' });
     }
@@ -15,12 +15,12 @@ exports.getAllJobs = async (req, res) => {
   }
 };
 
-// Get job by ID
+// Get job by ID (bây giờ không kiểm tra status)
 exports.getJobById = async (req, res) => {
   const { id } = req.params;
 
   try {
-    const job = await Job.findOne({ _id: id, status: 'show' });
+    const job = await Job.findOne({ _id: id });
     if (!job) {
       return res.status(404).json({ message: 'Không tìm thấy công việc' });
     }
