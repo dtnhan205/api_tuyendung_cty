@@ -5,8 +5,16 @@ const jobRouter = require('./routes/jobRouter');
 const newsRouter = require('./routes/newRouter');
 const profileRouter = require('./routes/profileRouter');
 const adminRouter = require('./routes/adminRouter');
+const upload = require('./middlewares/multerConfig');
 require('dotenv').config();
+const app = express();
 
+app.use(cors({
+  origin: 'http://localhost:3000', 
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], 
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+}));
 
 // Kiểm tra biến môi trường bắt buộc
 const requiredEnv = ['MONGODB_URI', 'PORT', 'JWT_SECRET'];
@@ -16,8 +24,6 @@ for (const env of requiredEnv) {
     process.exit(1);
   }
 }
-
-const app = express();
 
 // Cấu hình CORS
 const allowedOrigins = process.env.ALLOWED_ORIGINS
@@ -63,7 +69,7 @@ mongoose.connection.on('disconnected', () => console.log('Mongoose đã ngắt k
 
 // Routes
 app.use('/api/job', jobRouter);
-app.use('/api/new', newsRouter);
+app.use('/api/new', newsRouter, upload.single('thumbnail'),);
 app.use('/api/profile', profileRouter);
 app.use('/api/admin', adminRouter);
 app.use(express.static('public'));

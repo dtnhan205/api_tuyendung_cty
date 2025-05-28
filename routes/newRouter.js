@@ -3,6 +3,7 @@ const router = express.Router();
 const newsController = require('../controllers/newController');
 const jwt = require('jsonwebtoken');
 const Admin = require('../models/admin');
+const { upload, handleMulterError } = require('../middlewares/upload');
 
 // Middleware xác thực admin
 const authAdmin = async (req, res, next) => {
@@ -27,9 +28,27 @@ router.get('/', newsController.getAllNews);
 
 router.get('/:id', newsController.getNewsById);
 
-router.post('/', authAdmin, newsController.createNews);
+router.post(
+    '/',
+    authAdmin,
+    upload.fields([
+        { name: 'thumbnail', maxCount: 1 },
+        { name: 'contentImages' },
+    ]),
+    handleMulterError,
+    newsController.createNews
+);
 
-router.put('/:id', authAdmin, newsController.updateNews);
+router.put(
+    '/:id',
+    authAdmin,
+    upload.fields([
+        { name: 'thumbnail', maxCount: 1 },
+        { name: 'contentImages' },
+    ]),
+    handleMulterError,
+    newsController.updateNews
+);
 
 router.delete('/:id', authAdmin, newsController.deleteNews);
 
