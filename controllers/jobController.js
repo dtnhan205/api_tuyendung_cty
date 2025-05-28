@@ -188,23 +188,45 @@ exports.deleteJob = async (req, res) => {
 exports.toggleJobVisibility = async (req, res) => {
   try {
     const { id } = req.params;
+
+    // Kiểm tra định dạng ID
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'ID công việc không hợp lệ' });
+    }
+
     const job = await Job.findById(id);
     if (!job) {
       return res.status(404).json({ message: 'Không tìm thấy công việc' });
     }
 
+    // Chuyển đổi trạng thái
     job.status = job.status === 'show' ? 'hidden' : 'show';
     await job.save();
 
+    // Trả về toàn bộ thông tin công việc
     res.json({
       message: `Công việc đã được ${job.status === 'show' ? 'hiển thị' : 'ẩn'}`,
       job: {
         id: job._id,
+        jobType: job.jobType,
         name: job.name,
+        brands: job.brands,
+        position: job.position,
+        workplace: job.workplace,
+        salary: job.salary,
+        slot: job.slot,
+        postDate: job.postDate,
+        dueDate: job.dueDate,
+        degree: job.degree,
+        workExperience: job.workExperience,
+        jobRequirements: job.jobRequirements, // Đảm bảo trả về trường này
+        welfare: job.welfare, // Đảm bảo trả về trường này
         status: job.status,
+        createdAt: job.createdAt,
       },
     });
   } catch (err) {
+    console.error('Lỗi toggleJobVisibility:', err);
     res.status(500).json({ error: 'Lỗi máy chủ' });
   }
 };
