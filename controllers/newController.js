@@ -252,30 +252,39 @@ exports.toggleNewsVisibility = async (req, res) => {
   const { id } = req.params;
 
   try {
-    // Tìm tin tức theo trường id (lưu ý: trong model, id là String, không phải ObjectId)
+    // Tìm tin tức theo trường id
     const news = await News.findOne({ id });
     if (!news) {
       return res.status(404).json({ message: 'Không tìm thấy tin tức' });
     }
 
-    // Chuyển đổi trạng thái
+    // Log để kiểm tra contentBlocks trước khi cập nhật
+    console.log('ContentBlocks trước khi cập nhật:', news.contentBlocks);
+
+    // Chỉ thay đổi status
     news.status = news.status === 'show' ? 'hidden' : 'show';
     await news.save();
 
+    // Lấy lại dữ liệu mới nhất từ database để đảm bảo không thay đổi các trường khác
+    const updatedNews = await News.findOne({ id });
+
+    // Log để kiểm tra contentBlocks sau khi cập nhật
+    console.log('ContentBlocks sau khi cập nhật:', updatedNews.contentBlocks);
+
     // Trả về toàn bộ thông tin tin tức, bao gồm contentBlocks
     res.json({
-      message: `Tin tức đã được ${news.status === 'show' ? 'hiển thị' : 'ẩn'}`,
+      message: `Tin tức đã được ${updatedNews.status === 'show' ? 'hiển thị' : 'ẩn'}`,
       news: {
-        id: news.id,
-        title: news.title,
-        slug: news.slug,
-        thumbnailUrl: news.thumbnailUrl,
-        thumbnailCaption: news.thumbnailCaption,
-        publishedAt: news.publishedAt,
-        views: news.views,
-        status: news.status,
-        createdAt: news.createdAt,
-        contentBlocks: news.contentBlocks, // Đảm bảo trả về contentBlocks
+        id: updatedNews.id,
+        title: updatedNews.title,
+        slug: updatedNews.slug,
+        thumbnailUrl: updatedNews.thumbnailUrl,
+        thumbnailCaption: updatedNews.thumbnailCaption,
+        publishedAt: updatedNews.publishedAt,
+        views: updatedNews.views,
+        status: updatedNews.status,
+        createdAt: updatedNews.createdAt,
+        contentBlocks: updatedNews.contentBlocks, // Đảm bảo trả về contentBlocks không đổi
       },
     });
   } catch (err) {
