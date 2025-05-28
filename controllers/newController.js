@@ -252,20 +252,30 @@ exports.toggleNewsVisibility = async (req, res) => {
   const { id } = req.params;
 
   try {
+    // Tìm tin tức theo trường id (lưu ý: trong model, id là String, không phải ObjectId)
     const news = await News.findOne({ id });
     if (!news) {
       return res.status(404).json({ message: 'Không tìm thấy tin tức' });
     }
 
+    // Chuyển đổi trạng thái
     news.status = news.status === 'show' ? 'hidden' : 'show';
     await news.save();
 
+    // Trả về toàn bộ thông tin tin tức, bao gồm contentBlocks
     res.json({
       message: `Tin tức đã được ${news.status === 'show' ? 'hiển thị' : 'ẩn'}`,
       news: {
         id: news.id,
         title: news.title,
+        slug: news.slug,
+        thumbnailUrl: news.thumbnailUrl,
+        thumbnailCaption: news.thumbnailCaption,
+        publishedAt: news.publishedAt,
+        views: news.views,
         status: news.status,
+        createdAt: news.createdAt,
+        contentBlocks: news.contentBlocks, // Đảm bảo trả về contentBlocks
       },
     });
   } catch (err) {
