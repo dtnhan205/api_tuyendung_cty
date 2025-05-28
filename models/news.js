@@ -5,21 +5,19 @@ const newsSchema = new mongoose.Schema({
   title: { type: String, required: true, trim: true },
   slug: { type: String, required: true, unique: true, trim: true },
   thumbnailUrl: { type: String, required: true, trim: true },
-  thumbnailCaption: { type: String, required: true, trim: true },
+  thumbnailCaption: { type: String, default: '', trim: true },
   publishedAt: { type: Date, required: true },
   views: { type: Number, default: 0, min: 0 },
-  rating: {
-    score: { type: Number, default: 0.0, min: 0.0, max: 5.0 },
-    votes: { type: Number, default: 0, min: 0 },
-  },
   status: { type: String, enum: ['hidden', 'show'], default: 'show' },
   createdAt: { type: Date, default: Date.now },
   contentBlocks: [{
     type: { type: String, enum: ['text', 'image'], required: true },
-    content: { type: String, required: function() { return this.type === 'text'; } }, 
-    url: { type: String, required: function() { return this.type === 'image'; } },
+    content: { type: String, default: '', trim: true },
+    url: { type: String, default: '', trim: true },
     caption: { type: String, default: '', trim: true },
   }],
 });
+
+newsSchema.index({ views: -1 });
 
 module.exports = mongoose.model('News', newsSchema);

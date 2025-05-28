@@ -4,7 +4,7 @@ const validator = require('validator');
 const multer = require('multer');
 const upload = require('../middlewares/multerConfig');
 
-// Middleware xử lý lỗi upload (bạn có thể để riêng nếu muốn)
+// Middleware xử lý lỗi upload
 const handleMulterError = (err, req, res, next) => {
   if (err instanceof multer.MulterError) {
     return res.status(400).json({ error: `Lỗi upload: ${err.message}` });
@@ -14,6 +14,7 @@ const handleMulterError = (err, req, res, next) => {
   next();
 };
 
+// Lấy tất cả tin tức
 exports.getAllNews = async (req, res) => {
   try {
     const newsList = await News.find().sort({ publishedAt: -1 });
@@ -26,15 +27,48 @@ exports.getAllNews = async (req, res) => {
   }
 };
 
+// Lấy tin tức theo ID và tăng views
 exports.getNewsById = async (req, res) => {
   try {
-    const news = await News.findOne({ id: req.params.id });
+    const news = await News.findOneAndUpdate(
+      { id: req.params.id }, // Tìm tin tức theo id
+      { $inc: { views: 1 } }, // Tăng views lên 1
+      { new: true } // Trả về document sau khi cập nhật
+    );
+
     if (!news) {
       return res.status(404).json({ message: "Không tìm thấy tin tức" });
     }
+
     res.json(news);
   } catch (error) {
     res.status(500).json({ message: 'Lỗi server khi lấy tin tức', error: error.message });
+  }
+};
+
+// Lấy bài đăng hot nhất
+exports.getHottestNews = async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 0;
+
+    let query = News.find({ status: 'show' }).sort({ views: -1 });
+
+    if (limit > 0) {
+      query = query.limit(limit);
+    }
+
+    const hottestNewsList = await query;
+
+    if (hottestNewsList.length === 0) {
+      return res.status(404).json({ message: 'Không tìm thấy bài đăng nào' });
+    }
+
+    res.json({
+      message: 'Lấy danh sách bài đăng hot thành công',
+      news: hottestNewsList,
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Lỗi server khi lấy danh sách bài đăng hot', error: error.message });
   }
 };
 
@@ -52,34 +86,47 @@ exports.createNews = async (req, res) => {
       contentBlocks: rawContentBlocks,
     } = req.body;
 
-    // ✅ Lấy file thumbnail đã upload
-    const thumbnailUrl = req.file ? `/images/${req.file.filename}` : null;
+    const thumbnail = req.files && req.files['thumbnail'] ? req.files['thumbnail'][0] : null;
+    if (!thumbnail) {
+      return res.status(400).json({ error: 'Không tìm thấy file thumbnail' });
+    }
+    const thumbnailUrl = `/images/${thumbnail.filename}`;
 
-    // ⚠️ Kiểm tra bắt buộc
-    if (!id || !thumbnailUrl) {
-      return res.status(400).json({ error: 'Thiếu id hoặc thumbnail ảnh' });
+    if (!id) {
+      return res.status(400).json({ error: 'Thiếu id' });
     }
 
-    // Parse contentBlocks nếu là JSON string
-    let contentBlocks = rawContentBlocks;
-    if (typeof rawContentBlocks === 'string') {
-      try {
-        contentBlocks = JSON.parse(rawContentBlocks);
-      } catch (e) {
-        return res.status(400).json({ error: 'contentBlocks JSON không hợp lệ' });
+    let contentBlocks = [];
+    if (rawContentBlocks) {
+      if (typeof rawContentBlocks === 'string') {
+        try {
+          contentBlocks = JSON.parse(rawContentBlocks);
+        } catch (e) {
+          return res.status(400).json({ error: 'contentBlocks JSON không hợp lệ' });
+        }
+      } else if (Array.isArray(rawContentBlocks)) {
+        contentBlocks = rawContentBlocks;
       }
     }
 
-    // Validate contentBlocks
-    if (!Array.isArray(contentBlocks)) contentBlocks = [];
+    if (!Array.isArray(contentBlocks)) {
+      contentBlocks = [];
+    }
 
     for (const block of contentBlocks) {
-      if (block.type === 'text' && (!block.content || typeof block.content !== 'string')) {
-        return res.status(400).json({ error: 'Nội dung văn bản không hợp lệ' });
-      } else if (block.type === 'image' && (!block.url || typeof block.url !== 'string')) {
-        return res.status(400).json({ error: 'URL ảnh không hợp lệ' });
-      } else if (!['text', 'image'].includes(block.type)) {
+      if (!['text', 'image'].includes(block.type)) {
         return res.status(400).json({ error: 'Loại khối nội dung không hợp lệ' });
+      }
+      if (block.type === 'text' && !block.content) {
+        return res.status(400).json({ error: 'Block text phải có content' });
+      }
+      if (block.type === 'image' && !block.url) {
+        return res.status(400).json({ error: 'Block image phải có url' });
+      }
+      if (block.type === 'text') {
+        block.url = '';
+      } else if (block.type === 'image') {
+        block.content = '';
       }
     }
 
@@ -87,11 +134,10 @@ exports.createNews = async (req, res) => {
       id,
       title,
       slug,
-      thumbnailUrl, // ✅ Lấy từ file upload
-      thumbnailCaption,
+      thumbnailUrl,
+      thumbnailCaption: thumbnailCaption || '',
       publishedAt: new Date(publishedAt),
       views: parseInt(views, 10) || 0,
-      rating: rating ? (typeof rating === 'string' ? JSON.parse(rating) : rating) : { score: 0.0, votes: 0 },
       status: status || 'show',
       contentBlocks,
     });
@@ -103,10 +149,12 @@ exports.createNews = async (req, res) => {
     });
   } catch (err) {
     console.error('POST /api/news error:', err);
+    if (err.code === 11000) {
+      return res.status(400).json({ error: `ID "${req.body.id}" đã tồn tại` });
+    }
     res.status(400).json({ error: err.message });
   }
 };
-
 
 // Update a news by ID
 exports.updateNews = async (req, res) => {
@@ -118,7 +166,6 @@ exports.updateNews = async (req, res) => {
     thumbnailCaption,
     publishedAt,
     views,
-    rating,
     status,
     contentBlocks: rawContentBlocks,
   } = req.body;
@@ -126,8 +173,8 @@ exports.updateNews = async (req, res) => {
   try {
     let contentBlocks = typeof rawContentBlocks === 'string' ? JSON.parse(rawContentBlocks) : rawContentBlocks;
 
-    // Validate
     if (!Array.isArray(contentBlocks)) contentBlocks = [];
+
     for (const block of contentBlocks) {
       if (block.type === 'text' && (!block.content || typeof block.content !== 'string')) {
         return res.status(400).json({ error: 'Nội dung văn bản không hợp lệ' });
@@ -138,14 +185,12 @@ exports.updateNews = async (req, res) => {
       }
     }
 
-    // Upload mới
     const uploadedImages = (req.files || []).map(file => ({
       type: 'image',
       url: `/images/${file.filename}`,
       caption: '',
     }));
 
-    // Kết hợp contentBlocks cũ và ảnh mới (nếu block image chưa có url thì thay thế)
     let imageIndex = 0;
     const finalContentBlocks = contentBlocks.map(block => {
       if (block.type === 'image') {
@@ -155,7 +200,6 @@ exports.updateNews = async (req, res) => {
       return block;
     });
 
-    // Thêm các ảnh dư chưa được gắn vào block nào
     while (imageIndex < uploadedImages.length) {
       finalContentBlocks.push(uploadedImages[imageIndex++]);
     }
@@ -166,10 +210,9 @@ exports.updateNews = async (req, res) => {
         title,
         slug,
         thumbnailUrl,
-        thumbnailCaption,
+        thumbnailCaption: thumbnailCaption || '',
         publishedAt: publishedAt ? new Date(publishedAt) : undefined,
         views: parseInt(views, 10) || 0,
-        rating: rating ? (typeof rating === 'string' ? JSON.parse(rating) : rating) : { score: 0.0, votes: 0 },
         status: status || 'show',
         contentBlocks: finalContentBlocks,
       },
@@ -187,7 +230,6 @@ exports.updateNews = async (req, res) => {
     res.status(400).json({ error: err.message });
   }
 };
-
 
 // Delete a news by ID
 exports.deleteNews = async (req, res) => {
@@ -210,7 +252,7 @@ exports.toggleNewsVisibility = async (req, res) => {
   const { id } = req.params;
 
   try {
-    const news = await News.findOne({ id }); // Tìm theo id tùy chỉnh
+    const news = await News.findOne({ id });
     if (!news) {
       return res.status(404).json({ message: 'Không tìm thấy tin tức' });
     }

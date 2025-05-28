@@ -28,6 +28,7 @@ router.get('/', newsController.getAllNews);
 
 router.get('/:id', newsController.getNewsById);
 
+router.get('/hottest', newsController.getHottestNews); 
 router.post(
     '/',
     authAdmin,

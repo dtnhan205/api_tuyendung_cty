@@ -69,7 +69,7 @@ mongoose.connection.on('disconnected', () => console.log('Mongoose đã ngắt k
 
 // Routes
 app.use('/api/job', jobRouter);
-app.use('/api/new', newsRouter, upload.single('thumbnail'),);
+app.use('/api/new', newsRouter);
 app.use('/api/profile', profileRouter);
 app.use('/api/admin', adminRouter);
 app.use(express.static('public'));

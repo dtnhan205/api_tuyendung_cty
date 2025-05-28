@@ -2,20 +2,21 @@ const mongoose = require('mongoose');
 
 const jobSchema = new mongoose.Schema({
   _id: { type: mongoose.Schema.Types.ObjectId, auto: true },
-  jobType: { type: String, required: true, trim: true }, // Ví dụ: "OFFICE WORK"
-  name: { type: String, required: true, trim: true }, // Tên công việc
-  brands: { type: String, trim: true }, // Các thương hiệu
-  workplace: { type: String, required: true, trim: true }, // Nơi làm việc
-  salary: { type: String, required: true, trim: true }, // Mức lương
-  slot: { type: Number, required: true, min: 0 }, // Số lượng slot
-  postDate: { type: Date, required: true }, // Ngày đăng
-  dueDate: { type: Date, required: true }, // Ngày hết hạn
-  degree: { type: String, required: true, trim: true }, // Bằng cấp
-  workExperience: { type: String, required: true, trim: true }, // Kinh nghiệm làm việc
-  jobDescription: { type: String, required: true, trim: true }, // Mô tả công việc
-  welfare: { type: String, required: true, trim: true }, // Phúc lợi
-  status: { type: String, enum: ['hidden', 'show'], default: 'show' }, // Trạng thái hiển thị
-  createdAt: { type: Date, default: Date.now }, // Thời gian tạo
+  jobType: { type: String, required: true, trim: true },
+  name: { type: String, required: true, trim: true },
+  brands: { type: [String], trim: true },
+  position: { type: String, required: true, trim: true },
+  workplace: { type: String, required: true, trim: true },
+  salary: { type: String, required: true, trim: true },
+  slot: { type: Number, required: true, min: 0 },
+  postDate: { type: Date, required: true },
+  dueDate: { type: Date, required: true },
+  degree: { type: String, required: true, trim: true },
+  workExperience: { type: String, required: true, trim: true },
+  jobRequirements: { type: [String], required: true, trim: true },
+  welfare: { type: [String], required: true, trim: true },
+  status: { type: String, enum: ['hidden', 'show'], default: 'show' },
+  createdAt: { type: Date, default: Date.now },
 });
 
 module.exports = mongoose.model('Job', jobSchema);
