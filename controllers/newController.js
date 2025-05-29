@@ -27,14 +27,23 @@ exports.getAllNews = async (req, res) => {
   }
 };
 
-// Lấy tin tức theo ID và tăng views
+// Lấy tin tức theo ID (chỉ tăng views nếu không phải admin)
 exports.getNewsById = async (req, res) => {
   try {
-    const news = await News.findOneAndUpdate(
-      { id: req.params.id }, // Tìm tin tức theo id
-      { $inc: { views: 1 } }, // Tăng views lên 1
-      { new: true } // Trả về document sau khi cập nhật
-    );
+    const isAdmin = !!req.headers.authorization; // Kiểm tra nếu có Authorization header (admin)
+
+    let news;
+    if (isAdmin) {
+      // Nếu là admin, không tăng views, chỉ lấy dữ liệu
+      news = await News.findOne({ id: req.params.id });
+    } else {
+      // Nếu không phải admin (user), tăng views
+      news = await News.findOneAndUpdate(
+        { id: req.params.id },
+        { $inc: { views: 1 } },
+        { new: true }
+      );
+    }
 
     if (!news) {
       return res.status(404).json({ message: "Không tìm thấy tin tức" });
@@ -72,7 +81,7 @@ exports.getHottestNews = async (req, res) => {
   }
 };
 
-// Create a new news
+// Tạo tin tức mới
 exports.createNews = async (req, res) => {
   try {
     const {
@@ -156,7 +165,7 @@ exports.createNews = async (req, res) => {
   }
 };
 
-// Update a news by ID
+// Cập nhật tin tức theo ID
 exports.updateNews = async (req, res) => {
   const { id } = req.params;
   const {
@@ -231,7 +240,7 @@ exports.updateNews = async (req, res) => {
   }
 };
 
-// Delete a news by ID
+// Xóa tin tức theo ID
 exports.deleteNews = async (req, res) => {
   const { id } = req.params;
 
@@ -247,31 +256,25 @@ exports.deleteNews = async (req, res) => {
   }
 };
 
-// Toggle news visibility
+// Chuyển đổi trạng thái hiển thị của tin tức
 exports.toggleNewsVisibility = async (req, res) => {
   const { id } = req.params;
 
   try {
-    // Tìm tin tức theo trường id
     const news = await News.findOne({ id });
     if (!news) {
       return res.status(404).json({ message: 'Không tìm thấy tin tức' });
     }
 
-    // Log để kiểm tra contentBlocks trước khi cập nhật
     console.log('ContentBlocks trước khi cập nhật:', news.contentBlocks);
 
-    // Chỉ thay đổi status
     news.status = news.status === 'show' ? 'hidden' : 'show';
     await news.save();
 
-    // Lấy lại dữ liệu mới nhất từ database để đảm bảo không thay đổi các trường khác
     const updatedNews = await News.findOne({ id });
 
-    // Log để kiểm tra contentBlocks sau khi cập nhật
     console.log('ContentBlocks sau khi cập nhật:', updatedNews.contentBlocks);
 
-    // Trả về toàn bộ thông tin tin tức, bao gồm contentBlocks
     res.json({
       message: `Tin tức đã được ${updatedNews.status === 'show' ? 'hiển thị' : 'ẩn'}`,
       news: {
@@ -284,7 +287,7 @@ exports.toggleNewsVisibility = async (req, res) => {
         views: updatedNews.views,
         status: updatedNews.status,
         createdAt: updatedNews.createdAt,
-        contentBlocks: updatedNews.contentBlocks, // Đảm bảo trả về contentBlocks không đổi
+        contentBlocks: updatedNews.contentBlocks,
       },
     });
   } catch (err) {

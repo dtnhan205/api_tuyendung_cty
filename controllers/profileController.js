@@ -73,6 +73,7 @@ exports.downloadCv = async (req, res) => {
 // Tạo profile mới
 exports.createProfile = async (req, res) => {
   try {
+    
     const { jobId, jobName, jobWorkplace, form, status } = req.body;
 
     if (!jobId || !jobName || !jobWorkplace || !form) {
