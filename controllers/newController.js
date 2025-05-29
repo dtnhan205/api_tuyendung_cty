@@ -194,7 +194,16 @@ exports.updateNews = async (req, res) => {
       }
     }
 
-    const uploadedImages = (req.files || []).map(file => ({
+    // Kiểm tra và xử lý req.files một cách an toàn
+    const files = req.files || {};
+    const thumbnail = files['thumbnail'] && files['thumbnail'].length > 0 ? files['thumbnail'][0] : null;
+    const contentImages = files['contentImages'] && Array.isArray(files['contentImages']) ? files['contentImages'] : [];
+
+    // Xử lý thumbnailUrl: Nếu không có file thumbnail mới, giữ nguyên giá trị cũ từ body
+    const finalThumbnailUrl = thumbnail ? `/images/${thumbnail.filename}` : (thumbnailUrl || '');
+
+    // Xử lý contentImages
+    const uploadedImages = contentImages.map(file => ({
       type: 'image',
       url: `/images/${file.filename}`,
       caption: '',
@@ -203,8 +212,12 @@ exports.updateNews = async (req, res) => {
     let imageIndex = 0;
     const finalContentBlocks = contentBlocks.map(block => {
       if (block.type === 'image') {
-        if (block.url) return block;
-        if (imageIndex < uploadedImages.length) return uploadedImages[imageIndex++];
+        if (block.url && !block.url.startsWith('blob:')) {
+          return block; // Giữ nguyên block nếu đã có URL và không phải blob
+        }
+        if (imageIndex < uploadedImages.length) {
+          return uploadedImages[imageIndex++]; // Sử dụng file mới nếu có
+        }
       }
       return block;
     });
@@ -218,7 +231,7 @@ exports.updateNews = async (req, res) => {
       {
         title,
         slug,
-        thumbnailUrl,
+        thumbnailUrl: finalThumbnailUrl,
         thumbnailCaption: thumbnailCaption || '',
         publishedAt: publishedAt ? new Date(publishedAt) : undefined,
         views: parseInt(views, 10) || 0,
