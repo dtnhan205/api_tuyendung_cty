@@ -11,7 +11,6 @@ require('dotenv').config();
 const app = express();
 
 // Cấu hình CORS
-// Cấu hình CORS
 const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',')
   : [
@@ -29,7 +28,6 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
 app.use(cors({
   origin: (origin, callback) => {
     console.log(`[${new Date().toISOString()}] Request Origin: ${origin}`);
-    // Cho phép tất cả origin trong môi trường phát triển để dễ debug
     if (process.env.NODE_ENV === 'development' || !origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
@@ -65,13 +63,8 @@ const mongooseOptions = {
   serverSelectionTimeoutMS: 60000,
   socketTimeoutMS: 60000,
   connectTimeoutMS: 30000,
-  // Thêm các tùy chọn để tăng tính ổn định khi triển khai
   maxPoolSize: 10, // Giới hạn số kết nối đồng thời
   minPoolSize: 2,  // Duy trì tối thiểu 2 kết nối
-  retryWrites: true, // Thử lại các thao tác ghi nếu gặp lỗi
-  retryReads: true,  // Thử lại các thao tác đọc nếu gặp lỗi
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
 };
 
 mongoose.connect(process.env.MONGODB_URI, mongooseOptions)
@@ -92,7 +85,7 @@ app.use('/api/profile', profileRouter);
 app.use('/api/admin', adminRouter);
 app.use(express.static('public'));
 
-// Health check endpoint (rất quan trọng khi triển khai trên hosting)
+// Health check endpoint
 app.get('/health', (req, res) => {
   const healthStatus = {
     status: 'OK',
@@ -111,7 +104,6 @@ app.use((req, res, next) => {
 // Xử lý lỗi chung
 app.use((err, req, res, next) => {
   console.error(`[${new Date().toISOString()}] Lỗi server:`, err.message, err.stack);
-  // Chỉ gửi chi tiết lỗi trong môi trường phát triển
   const errorResponse = process.env.NODE_ENV === 'development'
     ? { message: 'Lỗi server', error: err.message, stack: err.stack }
     : { message: 'Lỗi server' };
@@ -119,8 +111,8 @@ app.use((err, req, res, next) => {
 });
 
 // Khởi động server
-const PORT = process.env.PORT || 3000; // Sử dụng port từ hosting hoặc mặc định 3000
-const HOST = process.env.HOST || '0.0.0.0'; // Bind tất cả interface, phù hợp với hosting
+const PORT = process.env.PORT || 3000;
+const HOST = process.env.HOST || '0.0.0.0';
 app.listen(PORT, HOST, () => {
   console.log(`Server đang chạy tại http://${HOST}:${PORT}`);
   console.log(`Môi trường: ${process.env.NODE_ENV || 'development'}`);
@@ -142,7 +134,7 @@ const gracefulShutdown = async (signal) => {
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 
-// Xử lý lỗi uncaughtException để tránh crash ứng dụng
+// Xử lý lỗi uncaughtException
 process.on('uncaughtException', (err) => {
   console.error(`[${new Date().toISOString()}] Uncaught Exception:`, err.message, err.stack);
 });
