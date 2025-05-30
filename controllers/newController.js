@@ -85,7 +85,6 @@ exports.getHottestNews = async (req, res) => {
 exports.createNews = async (req, res) => {
   try {
     const {
-      id,
       title,
       slug,
       thumbnailCaption,
@@ -101,9 +100,8 @@ exports.createNews = async (req, res) => {
     }
     const thumbnailUrl = `/images/${thumbnail.filename}`;
 
-    if (!id) {
-      return res.status(400).json({ error: 'Thiếu id' });
-    }
+    // Tạo id tự động bằng cách sử dụng _id của MongoDB
+    const newId = new mongoose.Types.ObjectId().toString();
 
     let contentBlocks = [];
     if (rawContentBlocks) {
@@ -122,25 +120,43 @@ exports.createNews = async (req, res) => {
       contentBlocks = [];
     }
 
-    for (const block of contentBlocks) {
-      if (!['text', 'image'].includes(block.type)) {
-        return res.status(400).json({ error: 'Loại khối nội dung không hợp lệ' });
+    // Xử lý contentImages
+    const contentImages = req.files && req.files['contentImages'] ? req.files['contentImages'] : [];
+    const uploadedImages = contentImages.map(file => ({
+      type: 'image',
+      url: `/images/${file.filename}`,
+      caption: '',
+    }));
+
+    let imageIndex = 0;
+    const finalContentBlocks = contentBlocks.map(block => {
+      if (block.type === 'image') {
+        if (block.url && !block.url.startsWith('blob:') && !block.url.includes('placeholder')) {
+          return block; // Giữ nguyên block nếu đã có URL hợp lệ
+        }
+        if (imageIndex < uploadedImages.length) {
+          return {
+            ...uploadedImages[imageIndex++],
+            caption: block.caption || '',
+          }; // Sử dụng file mới nếu có
+        }
+        return res.status(400).json({ error: 'Block image thiếu file hoặc url hợp lệ' });
       }
       if (block.type === 'text' && !block.content) {
         return res.status(400).json({ error: 'Block text phải có content' });
       }
-      if (block.type === 'image' && !block.url) {
-        return res.status(400).json({ error: 'Block image phải có url' });
-      }
       if (block.type === 'text') {
         block.url = '';
-      } else if (block.type === 'image') {
-        block.content = '';
       }
+      return block;
+    });
+
+    while (imageIndex < uploadedImages.length) {
+      finalContentBlocks.push(uploadedImages[imageIndex++]);
     }
 
     const newNews = new News({
-      id,
+      id: newId,
       title,
       slug,
       thumbnailUrl,
@@ -148,7 +164,7 @@ exports.createNews = async (req, res) => {
       publishedAt: new Date(publishedAt),
       views: parseInt(views, 10) || 0,
       status: status || 'show',
-      contentBlocks,
+      contentBlocks: finalContentBlocks,
     });
 
     await newNews.save();
@@ -159,7 +175,7 @@ exports.createNews = async (req, res) => {
   } catch (err) {
     console.error('POST /api/news error:', err);
     if (err.code === 11000) {
-      return res.status(400).json({ error: `ID "${req.body.id}" đã tồn tại` });
+      return res.status(400).json({ error: `ID đã tồn tại` });
     }
     res.status(400).json({ error: err.message });
   }
@@ -184,25 +200,11 @@ exports.updateNews = async (req, res) => {
 
     if (!Array.isArray(contentBlocks)) contentBlocks = [];
 
-    for (const block of contentBlocks) {
-      if (block.type === 'text' && (!block.content || typeof block.content !== 'string')) {
-        return res.status(400).json({ error: 'Nội dung văn bản không hợp lệ' });
-      } else if (block.type === 'image' && (!block.url || typeof block.url !== 'string')) {
-        return res.status(400).json({ error: 'URL ảnh không hợp lệ' });
-      } else if (!['text', 'image'].includes(block.type)) {
-        return res.status(400).json({ error: 'Loại khối nội dung không hợp lệ' });
-      }
-    }
-
-    // Kiểm tra và xử lý req.files một cách an toàn
+    // Xử lý contentImages
     const files = req.files || {};
     const thumbnail = files['thumbnail'] && files['thumbnail'].length > 0 ? files['thumbnail'][0] : null;
     const contentImages = files['contentImages'] && Array.isArray(files['contentImages']) ? files['contentImages'] : [];
 
-    // Xử lý thumbnailUrl: Nếu không có file thumbnail mới, giữ nguyên giá trị cũ từ body
-    const finalThumbnailUrl = thumbnail ? `/images/${thumbnail.filename}` : (thumbnailUrl || '');
-
-    // Xử lý contentImages
     const uploadedImages = contentImages.map(file => ({
       type: 'image',
       url: `/images/${file.filename}`,
@@ -212,12 +214,19 @@ exports.updateNews = async (req, res) => {
     let imageIndex = 0;
     const finalContentBlocks = contentBlocks.map(block => {
       if (block.type === 'image') {
-        if (block.url && !block.url.startsWith('blob:')) {
-          return block; // Giữ nguyên block nếu đã có URL và không phải blob
+        if (block.url && !block.url.startsWith('blob:') && !block.url.includes('placeholder')) {
+          return block; // Giữ nguyên block nếu đã có URL hợp lệ
         }
         if (imageIndex < uploadedImages.length) {
-          return uploadedImages[imageIndex++]; // Sử dụng file mới nếu có
+          return {
+            ...uploadedImages[imageIndex++],
+            caption: block.caption || '',
+          }; // Sử dụng file mới nếu có
         }
+        return res.status(400).json({ error: 'Block image thiếu file hoặc url hợp lệ' });
+      }
+      if (block.type === 'text' && (!block.content || typeof block.content !== 'string')) {
+        return res.status(400).json({ error: 'Nội dung văn bản không hợp lệ' });
       }
       return block;
     });
@@ -225,6 +234,8 @@ exports.updateNews = async (req, res) => {
     while (imageIndex < uploadedImages.length) {
       finalContentBlocks.push(uploadedImages[imageIndex++]);
     }
+
+    const finalThumbnailUrl = thumbnail ? `/images/${thumbnail.filename}` : (thumbnailUrl || '');
 
     const updatedNews = await News.findOneAndUpdate(
       { id },
