@@ -28,6 +28,94 @@ exports.getJobById = async (req, res) => {
 };
 
 // Tạo công việc mới
+exports.createJob = async (req, res) => {
+  try {
+    const {
+      jobType,
+      name,
+      brands,
+      position,
+      workplace,
+      salary,
+      slot,
+      postDate,
+      dueDate,
+      degree,
+      workExperience,
+      jobRequirements,
+      welfare,
+      status,
+    } = req.body;
+
+    // Kiểm tra các trường bắt buộc
+    const requiredFields = [
+      'jobType',
+      'name',
+      'position',
+      'workplace',
+      'salary',
+      'slot',
+      'postDate',
+      'dueDate',
+      'degree',
+      'workExperience',
+      'jobRequirements',
+      'welfare',
+    ];
+    const missingFields = requiredFields.filter(field => req.body[field] === undefined || req.body[field] === null);
+    if (missingFields.length > 0) {
+      return res.status(400).json({
+        error: 'Thiếu các trường bắt buộc',
+        missingFields,
+      });
+    }
+
+    // Kiểm tra định dạng ngày
+    const parsedPostDate = new Date(postDate);
+    const parsedDueDate = new Date(dueDate);
+    if (isNaN(parsedPostDate) || isNaN(parsedDueDate)) {
+      return res.status(400).json({ error: 'Ngày postDate hoặc dueDate không hợp lệ' });
+    }
+
+    // Kiểm tra jobRequirements và welfare là mảng
+    if (!Array.isArray(jobRequirements) || !Array.isArray(welfare)) {
+      return res.status(400).json({ error: 'jobRequirements và welfare phải là mảng' });
+    }
+
+    // Kiểm tra slot là số hợp lệ
+    if (isNaN(slot) || parseInt(slot, 10) < 0) {
+      return res.status(400).json({ error: 'slot phải là số không âm' });
+    }
+
+    const newJob = new Job({
+      jobType,
+      name,
+      brands: brands || [],
+      position,
+      workplace,
+      salary,
+      slot: parseInt(slot, 10),
+      postDate: parsedPostDate,
+      dueDate: parsedDueDate,
+      degree,
+      workExperience,
+      jobRequirements,
+      welfare,
+      status: status || 'show',
+    });
+
+    await newJob.save();
+    res.status(201).json({
+      message: 'Tạo công việc thành công',
+      job: newJob,
+    });
+  } catch (err) {
+    console.error('Lỗi tạo công việc:', err);
+    res.status(400).json({ error: err.message });
+  }
+};
+
+// Cập nhật công việc
 exports.updateJob = async (req, res) => {
   try {
     const { id } = req.params;
@@ -141,6 +229,7 @@ exports.deleteJob = async (req, res) => {
     }
     res.json({ message: 'Xóa công việc thành công' });
   } catch (err) {
+    console.error('Lỗi xóa công việc:', err);
     res.status(500).json({ error: 'Lỗi máy chủ' });
   }
 };
@@ -197,4 +286,13 @@ exports.toggleJobVisibility = async (req, res) => {
     console.error('Lỗi toggleJobVisibility:', err);
     res.status(500).json({ error: 'Lỗi máy chủ' });
   }
+};
+
+module.exports = {
+  getAllJobs: exports.getAllJobs,
+  getJobById: exports.getJobById,
+  createJob: exports.createJob,
+  updateJob: exports.updateJob,
+  deleteJob: exports.deleteJob,
+  toggleJobVisibility: exports.toggleJobVisibility,
 };
