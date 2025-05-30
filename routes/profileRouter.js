@@ -37,6 +37,7 @@ const handleMulterError = (err, req, res, next) => {
 // Lấy tất cả profiles
 router.get('/', authAdmin, profileController.getAllProfiles);
 
+router.get('/:id', authAdmin, profileController.getProfileById);
 // Lấy profile theo jobId
 router.get('/job/:jobId', authAdmin, profileController.getProfileByJobId);
 

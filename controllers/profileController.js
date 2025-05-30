@@ -13,6 +13,19 @@ exports.getAllProfiles = async (req, res) => {
   }
 };
 
+// Lấy profile theo id
+exports.getProfileById = async (req, res) => {
+  try {
+    const profile = await Profile.findById(req.params.id);
+    if (!profile) {
+      return res.status(404).json({ message: 'Không tìm thấy profile' });
+    }
+    res.status(200).json(profile);
+  } catch (error) {
+    res.status(500).json({ message: 'Lỗi server', error: error.message });
+  }
+};
+
 // Lấy profile theo jobId
 exports.getProfileByJobId = async (req, res) => {
   try {
@@ -51,6 +64,7 @@ exports.getProfilesByStatus = async (req, res) => {
 exports.downloadCv = async (req, res) => {
   try {
     const profile = await Profile.findById(req.params.id);
+    console.log('Profile found:', profile); // Thêm log để debug
     if (!profile) {
       return res.status(404).json({ message: 'Không tìm thấy profile' });
     }
@@ -60,6 +74,7 @@ exports.downloadCv = async (req, res) => {
     }
 
     const filePath = path.join(__dirname, '..', 'public', profile.form.resume.url);
+    console.log('File path:', filePath); // Thêm log để debug
     if (!fs.existsSync(filePath)) {
       return res.status(404).json({ message: 'File CV không tồn tại trên server' });
     }
