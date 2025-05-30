@@ -7,42 +7,37 @@ const profileRouter = require('./routes/profileRouter');
 const adminRouter = require('./routes/adminRouter');
 const upload = require('./middlewares/multerConfig');
 require('dotenv').config();
+
 const app = express();
-
-app.use(cors({
-  origin: 'http://localhost:3000', 
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], 
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
-}));
-
-// Kiểm tra biến môi trường bắt buộc
-const requiredEnv = ['MONGODB_URI', 'PORT', 'JWT_SECRET'];
-for (const env of requiredEnv) {
-  if (!process.env[env]) {
-    console.error(`Lỗi: ${env} không được định nghĩa trong .env`);
-    process.exit(1);
-  }
-}
 
 // Cấu hình CORS
 const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',')
-  : ['http://localhost:3000', 'http://localhost:3801', 'http://localhost:3001', 'http://localhost:3002'];
+  : [
+      'http://localhost:3000',
+      'http://localhost:3801',
+      'http://localhost:3001',
+      'http://localhost:3002',
+      // 'https://your-frontend.com', // Thay bằng domain frontend thực tế
+      // 'https://<your-render-frontend>.onrender.com', // Thay bằng domain frontend trên Render
+    ];
 
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+    console.log(`[${new Date().toISOString()}] Request Origin: ${origin}`);
+    if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
     }
   },
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
   optionsSuccessStatus: 200,
 }));
 
+// Parse JSON body
 app.use(express.json());
 
 // Middleware ghi log yêu cầu
@@ -50,6 +45,15 @@ app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
   next();
 });
+
+// Kiểm tra biến môi trường bắt buộc
+const requiredEnv = ['MONGODB_URI', 'JWT_SECRET'];
+for (const env of requiredEnv) {
+  if (!process.env[env]) {
+    console.error(`Lỗi: Biến môi trường ${env} không được định nghĩa trong .env`);
+    process.exit(1);
+  }
+}
 
 // Kết nối MongoDB
 mongoose.connect(process.env.MONGODB_URI, {
@@ -68,11 +72,16 @@ mongoose.connection.on('error', (err) => console.error('Lỗi kết nối Mongoo
 mongoose.connection.on('disconnected', () => console.log('Mongoose đã ngắt kết nối'));
 
 // Routes
-app.use('/api/job', jobRouter);
+app.use('/api/jobs', jobRouter);
 app.use('/api/new', newsRouter);
 app.use('/api/profile', profileRouter);
 app.use('/api/admin', adminRouter);
 app.use(express.static('public'));
+
+// Health check endpoint (hữu ích cho host như Render)
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'OK', uptime: process.uptime() });
+});
 
 // Xử lý lỗi 404
 app.use((req, res, next) => {
@@ -81,19 +90,28 @@ app.use((req, res, next) => {
 
 // Xử lý lỗi chung
 app.use((err, req, res, next) => {
-  console.error('Lỗi server:', err.message, err.stack);
+  console.error(`[${new Date().toISOString()}] Lỗi server:`, err.message, err.stack);
   res.status(500).json({ message: 'Lỗi server', error: err.message });
 });
 
 // Khởi động server
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => {
-  console.log(`Server đang chạy tại cổng ${PORT}`);
+const PORT = process.env.PORT || 3000;
+const HOST = process.env.HOST || '0.0.0.0'; // Bind tất cả interface, phù hợp với host
+app.listen(PORT, HOST, () => {
+  console.log(`Server đang chạy tại http://${HOST}:${PORT}`);
 });
 
 // Graceful shutdown
 process.on('SIGINT', async () => {
+  console.log('Đang tắt server...');
   await mongoose.connection.close();
-  console.log('Đã đóng kết nối Mongoose do ứng dụng tắt');
+  console.log('Đã đóng kết nối Mongoose');
+  process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+  console.log('Nhận SIGTERM, đang tắt server...');
+  await mongoose.connection.close();
+  console.log('Đã đóng kết nối Mongoose');
   process.exit(0);
 });
