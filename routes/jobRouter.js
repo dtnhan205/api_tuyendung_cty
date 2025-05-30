@@ -33,6 +33,6 @@ router.put('/:id', authAdmin, jobController.updateJob);
 
 router.delete('/:id', authAdmin, jobController.deleteJob);
 
-router.put('/:id/toggle-visibility', authAdmin, jobController.toggleJobVisibility);
+router.patch('/:id/toggle-visibility', authAdmin, jobController.toggleJobVisibility);
 
 module.exports = router;

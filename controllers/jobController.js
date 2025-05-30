@@ -28,70 +28,6 @@ exports.getJobById = async (req, res) => {
 };
 
 // Tạo công việc mới
-exports.createJob = async (req, res) => {
-  try {
-    const {
-      jobType,
-      name,
-      brands,
-      position,
-      workplace,
-      salary,
-      slot,
-      postDate,
-      dueDate,
-      degree,
-      workExperience,
-      jobRequirements,
-      welfare,
-      status,
-    } = req.body;
-
-    // Kiểm tra các trường bắt buộc
-    if (!jobType || !name || !position || !workplace || !salary || !slot || !postDate || !dueDate || !degree || !workExperience || !jobRequirements || !welfare) {
-      return res.status(400).json({ error: 'Thiếu các trường bắt buộc' });
-    }
-
-    // Kiểm tra định dạng ngày
-    const parsedPostDate = new Date(postDate);
-    const parsedDueDate = new Date(dueDate);
-    if (isNaN(parsedPostDate) || isNaN(parsedDueDate)) {
-      return res.status(400).json({ error: 'Ngày không hợp lệ' });
-    }
-
-    // Kiểm tra jobRequirements và welfare là mảng
-    if (!Array.isArray(jobRequirements) || !Array.isArray(welfare)) {
-      return res.status(400).json({ error: 'jobRequirements và welfare phải là mảng' });
-    }
-
-    const newJob = new Job({
-      jobType,
-      name,
-      brands: brands || [],
-      position,
-      workplace,
-      salary,
-      slot: parseInt(slot, 10),
-      postDate: parsedPostDate,
-      dueDate: parsedDueDate,
-      degree,
-      workExperience,
-      jobRequirements,
-      welfare,
-      status: status || 'show',
-    });
-
-    await newJob.save();
-    res.status(201).json({
-      message: 'Tạo công việc thành công',
-      job: newJob,
-    });
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-};
-
-// Cập nhật công việc theo ID
 exports.updateJob = async (req, res) => {
   try {
     const { id } = req.params;
@@ -112,44 +48,72 @@ exports.updateJob = async (req, res) => {
       status,
     } = req.body;
 
-    // Kiểm tra jobRequirements và welfare là mảng nếu được cung cấp
-    if (jobRequirements && !Array.isArray(jobRequirements)) {
-      return res.status(400).json({ error: 'jobRequirements phải là mảng' });
-    }
-    if (welfare && !Array.isArray(welfare)) {
-      return res.status(400).json({ error: 'welfare phải là mảng' });
+    // Kiểm tra định dạng ID
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'ID công việc không hợp lệ' });
     }
 
-    // Kiểm tra định dạng ngày nếu được cung cấp
-    let parsedPostDate, parsedDueDate;
-    if (postDate) {
-      parsedPostDate = new Date(postDate);
-      if (isNaN(parsedPostDate)) {
-        return res.status(400).json({ error: 'postDate không hợp lệ' });
-      }
-    }
-    if (dueDate) {
-      parsedDueDate = new Date(dueDate);
-      if (isNaN(parsedDueDate)) {
-        return res.status(400).json({ error: 'dueDate không hợp lệ' });
-      }
+    // Kiểm tra công việc tồn tại
+    const existingJob = await Job.findById(id);
+    if (!existingJob) {
+      return res.status(404).json({ error: 'Không tìm thấy công việc để cập nhật' });
     }
 
-    const updateData = {};
-    if (jobType) updateData.jobType = jobType;
-    if (name) updateData.name = name;
-    if (brands) updateData.brands = brands;
-    if (position) updateData.position = position;
-    if (workplace) updateData.workplace = workplace;
-    if (salary) updateData.salary = salary;
-    if (slot) updateData.slot = parseInt(slot, 10);
-    if (postDate) updateData.postDate = parsedPostDate;
-    if (dueDate) updateData.dueDate = parsedDueDate;
-    if (degree) updateData.degree = degree;
-    if (workExperience) updateData.workExperience = workExperience;
-    if (jobRequirements) updateData.jobRequirements = jobRequirements;
-    if (welfare) updateData.welfare = welfare;
-    if (status) updateData.status = status;
+    // Kiểm tra các trường bắt buộc
+    const requiredFields = [
+      'jobType',
+      'name',
+      'position',
+      'workplace',
+      'salary',
+      'slot',
+      'postDate',
+      'dueDate',
+      'degree',
+      'workExperience',
+      'jobRequirements',
+      'welfare',
+    ];
+    const updateData = {
+      jobType: jobType || existingJob.jobType,
+      name: name || existingJob.name,
+      position: position || existingJob.position,
+      workplace: workplace || existingJob.workplace,
+      salary: salary || existingJob.salary,
+      slot: slot !== undefined ? parseInt(slot, 10) : existingJob.slot,
+      postDate: postDate ? new Date(postDate) : existingJob.postDate,
+      dueDate: dueDate ? new Date(dueDate) : existingJob.dueDate,
+      degree: degree || existingJob.degree,
+      workExperience: workExperience || existingJob.workExperience,
+      jobRequirements: jobRequirements || existingJob.jobRequirements,
+      welfare: welfare || existingJob.welfare,
+      brands: brands || existingJob.brands,
+      status: status || existingJob.status,
+    };
+
+    // Kiểm tra các trường bắt buộc trong updateData
+    const missingFields = requiredFields.filter(field => updateData[field] === undefined || updateData[field] === null);
+    if (missingFields.length > 0) {
+      return res.status(400).json({
+        error: 'Thiếu các trường bắt buộc',
+        missingFields,
+      });
+    }
+
+    // Kiểm tra định dạng ngày
+    if (isNaN(updateData.postDate) || isNaN(updateData.dueDate)) {
+      return res.status(400).json({ error: 'postDate hoặc dueDate không hợp lệ' });
+    }
+
+    // Kiểm tra jobRequirements và welfare là mảng
+    if (!Array.isArray(updateData.jobRequirements) || !Array.isArray(updateData.welfare)) {
+      return res.status(400).json({ error: 'jobRequirements và welfare phải là mảng' });
+    }
+
+    // Kiểm tra slot là số hợp lệ
+    if (isNaN(updateData.slot) || updateData.slot < 0) {
+      return res.status(400).json({ error: 'slot phải là số không âm' });
+    }
 
     const updatedJob = await Job.findByIdAndUpdate(
       id,
@@ -157,15 +121,12 @@ exports.updateJob = async (req, res) => {
       { new: true, runValidators: true }
     );
 
-    if (!updatedJob) {
-      return res.status(404).json({ error: 'Không tìm thấy công việc để cập nhật' });
-    }
-
     res.json({
       message: 'Cập nhật công việc thành công',
       job: updatedJob,
     });
   } catch (err) {
+    console.error('Lỗi cập nhật công việc:', err);
     res.status(400).json({ error: err.message });
   }
 };
@@ -194,35 +155,42 @@ exports.toggleJobVisibility = async (req, res) => {
       return res.status(400).json({ message: 'ID công việc không hợp lệ' });
     }
 
+    // Tìm công việc để kiểm tra sự tồn tại
     const job = await Job.findById(id);
     if (!job) {
       return res.status(404).json({ message: 'Không tìm thấy công việc' });
     }
 
-    // Chuyển đổi trạng thái
-    job.status = job.status === 'show' ? 'hidden' : 'show';
-    await job.save();
+    // Chuyển đổi trạng thái và cập nhật trực tiếp
+    const newStatus = job.status === 'show' ? 'hidden' : 'show';
+    await Job.updateOne(
+      { _id: id },
+      { $set: { status: newStatus } }
+    );
+
+    // Lấy lại thông tin công việc sau khi cập nhật
+    const updatedJob = await Job.findById(id);
 
     // Trả về toàn bộ thông tin công việc
     res.json({
-      message: `Công việc đã được ${job.status === 'show' ? 'hiển thị' : 'ẩn'}`,
+      message: `Công việc đã được ${newStatus === 'show' ? 'hiển thị' : 'ẩn'}`,
       job: {
-        id: job._id,
-        jobType: job.jobType,
-        name: job.name,
-        brands: job.brands,
-        position: job.position,
-        workplace: job.workplace,
-        salary: job.salary,
-        slot: job.slot,
-        postDate: job.postDate,
-        dueDate: job.dueDate,
-        degree: job.degree,
-        workExperience: job.workExperience,
-        jobRequirements: job.jobRequirements, // Đảm bảo trả về trường này
-        welfare: job.welfare, // Đảm bảo trả về trường này
-        status: job.status,
-        createdAt: job.createdAt,
+        id: updatedJob._id,
+        jobType: updatedJob.jobType,
+        name: updatedJob.name,
+        brands: updatedJob.brands,
+        position: updatedJob.position,
+        workplace: updatedJob.workplace,
+        salary: updatedJob.salary,
+        slot: updatedJob.slot,
+        postDate: updatedJob.postDate,
+        dueDate: updatedJob.dueDate,
+        degree: updatedJob.degree,
+        workExperience: updatedJob.workExperience,
+        jobRequirements: updatedJob.jobRequirements,
+        welfare: updatedJob.welfare,
+        status: updatedJob.status,
+        createdAt: updatedJob.createdAt,
       },
     });
   } catch (err) {
