@@ -11,6 +11,7 @@ require('dotenv').config();
 const app = express();
 
 // Cấu hình CORS
+// Cấu hình CORS
 const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',')
   : [
@@ -18,15 +19,17 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
       'http://localhost:3801',
       'http://localhost:3001',
       'http://localhost:3002',
+      'http://172.16.0.2:3000',
+      'http://192.168.1.50:3000',
       // Thêm các domain thực tế của frontend khi triển khai
       // 'https://your-frontend.com',
-      // 'https://<your-render-frontend>.onrender.com', // Domain frontend trên hosting
+      // 'https://<your-render-frontend>.onrender.com',
     ];
 
 app.use(cors({
   origin: (origin, callback) => {
     console.log(`[${new Date().toISOString()}] Request Origin: ${origin}`);
-    // Cho phép tất cả origin trong môi trường phát triển hoặc các origin được liệt kê
+    // Cho phép tất cả origin trong môi trường phát triển để dễ debug
     if (process.env.NODE_ENV === 'development' || !origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
