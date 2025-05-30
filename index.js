@@ -20,6 +20,7 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
       'http://localhost:3002',
       'http://172.16.0.2:3000',
       'http://192.168.1.50:3000',
+      'http://192.168.1.46:3000',
       // Thêm các domain thực tế của frontend khi triển khai
       // 'https://your-frontend.com',
       // 'https://<your-render-frontend>.onrender.com',
