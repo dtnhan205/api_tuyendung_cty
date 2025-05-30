@@ -1,6 +1,7 @@
 const Profile = require('../models/profile');
 const path = require('path');
 const fs = require('fs');
+const validator = require('validator');
 
 // Lấy tất cả profiles
 exports.getAllProfiles = async (req, res) => {
@@ -73,25 +74,33 @@ exports.downloadCv = async (req, res) => {
 // Tạo profile mới
 exports.createProfile = async (req, res) => {
   try {
-    
     const { jobId, jobName, jobWorkplace, form, status } = req.body;
 
+    // Kiểm tra các trường bắt buộc
     if (!jobId || !jobName || !jobWorkplace || !form) {
       return res.status(400).json({ message: 'Thiếu các trường bắt buộc: jobId, jobName, jobWorkplace, form' });
     }
 
+    // Xử lý form
     let parsedForm;
-    if (typeof form === 'string') {
-      parsedForm = JSON.parse(form);
-    } else {
-      parsedForm = form;
+    try {
+      parsedForm = typeof form === 'string' ? JSON.parse(form) : form;
+    } catch (error) {
+      return res.status(400).json({ message: 'Dữ liệu form không hợp lệ, không thể parse JSON', error: error.message });
     }
 
+    // Kiểm tra các trường bắt buộc trong form
     const { desiredWorkplace, fullName, phone, gender, dob, email, note } = parsedForm;
     if (!desiredWorkplace || !fullName || !phone || !gender || !dob || !email) {
-      return res.status(400).json({ message: 'Thiếu các trường bắt buộc trong form' });
+      return res.status(400).json({ message: 'Thiếu các trường bắt buộc trong form: desiredWorkplace, fullName, phone, gender, dob, email' });
     }
 
+    // Kiểm tra email không null và hợp lệ
+    if (!email || typeof email !== 'string' || !validator.isEmail(email)) {
+      return res.status(400).json({ message: 'Email không hợp lệ hoặc không được để trống' });
+    }
+
+    // Kiểm tra file CV
     const cvFile = req.files && req.files['resume'] ? req.files['resume'][0] : null;
     if (!cvFile) {
       return res.status(400).json({ message: 'Không tìm thấy file CV' });
@@ -104,6 +113,7 @@ exports.createProfile = async (req, res) => {
       url: `/cv/${cvFile.filename}`
     };
 
+    // Kiểm tra status
     if (status) {
       const validStatuses = ['pending', 'reviewed', 'interview', 'accepted', 'rejected'];
       if (!validStatuses.includes(status)) {
@@ -134,6 +144,9 @@ exports.createProfile = async (req, res) => {
     res.status(201).json(profile);
   } catch (error) {
     console.error('Lỗi tạo profile:', error);
+    if (error.code === 11000) {
+      return res.status(400).json({ message: 'Dữ liệu trùng lặp, vui lòng kiểm tra email hoặc jobId', error: error.message });
+    }
     res.status(400).json({ message: 'Dữ liệu không hợp lệ', error: error.message });
   }
 };
