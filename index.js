@@ -6,6 +6,7 @@ const newsRouter = require('./routes/newRouter');
 const profileRouter = require('./routes/profileRouter');
 const adminRouter = require('./routes/adminRouter');
 const upload = require('./middlewares/multerConfig');
+const bannerRouter = require('./routes/bannerRouter');
 require('dotenv').config();
 
 const app = express();
@@ -15,12 +16,11 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',')
   : [
       'http://localhost:3000',
-      'http://localhost:3801',
-      'http://localhost:3001',
       'http://192.168.41.77:3000',
       'http://172.16.0.2:3000',
       'http://192.168.1.50:3000',
       'http://192.168.1.46:3000',
+      'https://api-tuyendung-cty.onrender.com',
       // Thêm các domain thực tế của frontend khi triển khai
       // 'https://your-frontend.com',
       // 'https://<your-render-frontend>.onrender.com',
@@ -84,6 +84,7 @@ app.use('/api/job', jobRouter);
 app.use('/api/new', newsRouter);
 app.use('/api/profile', profileRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/banner', bannerRouter);
 app.use(express.static('public'));
 
 // Health check endpoint
