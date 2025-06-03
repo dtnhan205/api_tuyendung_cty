@@ -4,7 +4,7 @@ const jobSchema = new mongoose.Schema({
   _id: { type: mongoose.Schema.Types.ObjectId, auto: true },
   JobType: { type: String, required: true, trim: true },
   Name: { type: String, required: true, trim: true },
-  Brands: { type: [String], default: [] }, // Không bắt buộc, mặc định là mảng rỗng
+  Brands: { type: [String], default: [] },
   Position: { type: String, required: true, trim: true },
   Workplace: { type: String, required: true, trim: true },
   Salary: { type: String, required: true, trim: true },
@@ -13,13 +13,12 @@ const jobSchema = new mongoose.Schema({
   'Due date': { type: Date, required: true },
   Degree: { type: String, required: true, trim: true },
   'Work Experience': { type: String, required: true, trim: true },
-  'Job Description': { type: [String], default: [] }, // Không bắt buộc, mặc định là mảng rỗng
+  'Job Description': { type: [String], default: [] }, 
   'Job Requirements': { type: [String], required: true },
   Welfare: { type: [String], required: true },
   status: { type: String, enum: ['show', 'hidden'], default: 'show' },
   createdAt: { type: Date, default: Date.now },
 }, {
-  // Đảm bảo tên trường trong JSON được giữ nguyên
   toJSON: { transform: (doc, ret) => ret },
   toObject: { transform: (doc, ret) => ret },
 });

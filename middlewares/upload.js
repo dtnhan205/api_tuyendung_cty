@@ -2,27 +2,24 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-// Tạo thư mục public/images/ nếu chưa tồn tại
 const imageUploadDir = path.join(__dirname, '..', 'public', 'images');
 if (!fs.existsSync(imageUploadDir)) {
   fs.mkdirSync(imageUploadDir, { recursive: true });
 }
 
-// Tạo thư mục public/cv/ nếu chưa tồn tại
 const cvUploadDir = path.join(__dirname, '..', 'public', 'cv');
 if (!fs.existsSync(cvUploadDir)) {
   fs.mkdirSync(cvUploadDir, { recursive: true });
-  // Đặt quyền ghi cho thư mục (trên Windows/Linux)
-  fs.chmodSync(cvUploadDir, 0o755); // Thử đặt quyền nếu cần
+  fs.chmodSync(cvUploadDir, 0o755); 
 }
 
 // Cấu hình lưu trữ file
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     if (file.fieldname === 'resume') {
-      cb(null, cvUploadDir); // Lưu file PDF vào public/cv/
+      cb(null, cvUploadDir);
     } else {
-      cb(null, imageUploadDir); // Lưu hình ảnh vào public/images/
+      cb(null, imageUploadDir); 
     }
   },
   filename: (req, file, cb) => {
@@ -31,17 +28,14 @@ const storage = multer.diskStorage({
   },
 });
 
-// Bộ lọc file
 const fileFilter = (req, file, cb) => {
   if (file.fieldname === 'resume') {
-    // Chỉ cho phép file PDF cho resume
     if (file.mimetype === 'application/pdf') {
       cb(null, true);
     } else {
       cb(new Error('Chỉ hỗ trợ file PDF cho CV!'), false);
     }
   } else {
-    // Chỉ cho phép hình ảnh cho các field khác
     const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp', 'image/svg+xml'];
     const allowedExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'];
     const ext = path.extname(file.originalname).toLowerCase();
@@ -56,7 +50,7 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({
   storage,
   fileFilter,
-  limits: { fileSize: 10 * 1024 * 1024 }, // Tăng giới hạn lên 10MB để kiểm tra
+  limits: { fileSize: 10 * 1024 * 1024 }, 
 });
 
 const handleMulterError = (err, req, res, next) => {

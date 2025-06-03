@@ -24,7 +24,6 @@ const authAdmin = async (req, res, next) => {
   }
 };
 
-// Middleware xử lý lỗi upload (tích hợp trực tiếp)
 const handleMulterError = (err, req, res, next) => {
   if (err instanceof multer.MulterError) {
     return res.status(400).json({ error: `Lỗi upload: ${err.message}` });
@@ -34,20 +33,15 @@ const handleMulterError = (err, req, res, next) => {
   next();
 };
 
-// Lấy tất cả profiles
 router.get('/', authAdmin, profileController.getAllProfiles);
 
 router.get('/:id', authAdmin, profileController.getProfileById);
-// Lấy profile theo jobId
 router.get('/job/:jobId', authAdmin, profileController.getProfileByJobId);
 
-// Lấy profiles theo status
 router.get('/status/:status', authAdmin, profileController.getProfilesByStatus);
 
-// Tải file CV
 router.get('/:id/cv', authAdmin, profileController.downloadCv);
 
-// Tạo profile mới
 router.post(
   '/',
   upload.fields([{ name: 'resume', maxCount: 1 }]),
@@ -55,7 +49,6 @@ router.post(
   profileController.createProfile
 );
 
-// Cập nhật profile
 router.put(
   '/:id',
   authAdmin,
@@ -64,10 +57,8 @@ router.put(
   profileController.updateProfile
 );
 
-// Xóa profile
 router.delete('/:id', authAdmin, profileController.deleteProfile);
 
-// Xóa mềm (chuyển status thành rejected)
 router.put('/:id/reject', authAdmin, profileController.softDeleteProfile);
 
 module.exports = router;

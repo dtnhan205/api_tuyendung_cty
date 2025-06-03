@@ -64,7 +64,7 @@ exports.getProfilesByStatus = async (req, res) => {
 exports.downloadCv = async (req, res) => {
   try {
     const profile = await Profile.findById(req.params.id);
-    console.log('Profile found:', profile); // Thêm log để debug
+    console.log('Profile found:', profile);
     if (!profile) {
       return res.status(404).json({ message: 'Không tìm thấy profile' });
     }
@@ -74,7 +74,7 @@ exports.downloadCv = async (req, res) => {
     }
 
     const filePath = path.join(__dirname, '..', 'public', profile.form.resume.url);
-    console.log('File path:', filePath); // Thêm log để debug
+    console.log('File path:', filePath); 
     if (!fs.existsSync(filePath)) {
       return res.status(404).json({ message: 'File CV không tồn tại trên server' });
     }
@@ -86,17 +86,14 @@ exports.downloadCv = async (req, res) => {
   }
 };
 
-// Tạo profile mới
 exports.createProfile = async (req, res) => {
   try {
     const { jobId, jobName, jobWorkplace, form, status } = req.body;
 
-    // Kiểm tra các trường bắt buộc
     if (!jobId || !jobName || !jobWorkplace || !form) {
       return res.status(400).json({ message: 'Thiếu các trường bắt buộc: jobId, jobName, jobWorkplace, form' });
     }
 
-    // Xử lý form
     let parsedForm;
     try {
       parsedForm = typeof form === 'string' ? JSON.parse(form) : form;
@@ -104,18 +101,15 @@ exports.createProfile = async (req, res) => {
       return res.status(400).json({ message: 'Dữ liệu form không hợp lệ, không thể parse JSON', error: error.message });
     }
 
-    // Kiểm tra các trường bắt buộc trong form
     const { desiredWorkplace, fullName, phone, gender, dob, email, note } = parsedForm;
     if (!desiredWorkplace || !fullName || !phone || !gender || !dob || !email) {
       return res.status(400).json({ message: 'Thiếu các trường bắt buộc trong form: desiredWorkplace, fullName, phone, gender, dob, email' });
     }
 
-    // Kiểm tra email không null và hợp lệ
     if (!email || typeof email !== 'string' || !validator.isEmail(email)) {
       return res.status(400).json({ message: 'Email không hợp lệ hoặc không được để trống' });
     }
 
-    // Kiểm tra file CV
     const cvFile = req.files && req.files['resume'] ? req.files['resume'][0] : null;
     if (!cvFile) {
       return res.status(400).json({ message: 'Không tìm thấy file CV' });
@@ -128,7 +122,6 @@ exports.createProfile = async (req, res) => {
       url: `/cv/${cvFile.filename}`
     };
 
-    // Kiểm tra status
     if (status) {
       const validStatuses = ['pending', 'reviewed', 'interview', 'accepted', 'rejected'];
       if (!validStatuses.includes(status)) {

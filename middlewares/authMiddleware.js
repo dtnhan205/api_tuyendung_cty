@@ -12,13 +12,13 @@ const authMiddleware = async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dinhthenhan');
-    const user = await User.findById(decoded.id).select('-password'); // Lấy người dùng mà không có mật khẩu
+    const user = await User.findById(decoded.id).select('-password'); 
 
     if (!user) {
       return res.status(401).json({ error: 'Người dùng không tồn tại' });
     }
 
-    req.user = user; // Lưu thông tin người dùng vào request
+    req.user = user; 
     next();
   } catch (err) {
     if (err.name === 'TokenExpiredError') {
