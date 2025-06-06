@@ -7,6 +7,7 @@ const profileRouter = require('./routes/profileRouter');
 const adminRouter = require('./routes/adminRouter');
 const upload = require('./middlewares/multerConfig');
 const bannerRouter = require('./routes/bannerRouter');
+const contactRouter = require('./routes/contactRouter');
 require('dotenv').config();
 
 const app = express();
@@ -59,6 +60,7 @@ app.use('/api/new', newsRouter);
 app.use('/api/profile', profileRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/banner', bannerRouter);
+app.use('/api/contact', contactRouter);
 app.use(express.static('public'));
 
 app.get('/health', (req, res) => {
