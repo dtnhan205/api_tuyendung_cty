@@ -14,18 +14,7 @@ const app = express();
 // Cấu hình CORS
 const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',')
-  : [
-      'http://localhost:3000',
-      'http://192.168.41.77:3000',
-      'http://172.16.0.2:3000',
-      'http://192.168.1.50:3000',
-      'https://react-webtuyendung.onrender.com',
-    'https://react-webtuyendung-lo0i.onrender.com/',
-      // Thêm các domain thực tế của frontend khi triển khai
-      
-      // 'https://your-frontend.com',
-      // 'https://<your-render-frontend>.onrender.com',
-    ];
+  : (() => { throw new Error('Lỗi: ALLOWED_ORIGINS không được định nghĩa trong .env'); })();
 
 app.use(cors({
   origin: (origin, callback) => {
@@ -49,7 +38,7 @@ app.use((req, res, next) => {
   next();
 });
 
-const requiredEnv = ['MONGODB_URI', 'JWT_SECRET'];
+const requiredEnv = ['MONGODB_URI', 'JWT_SECRET', 'ALLOWED_ORIGINS'];
 for (const env of requiredEnv) {
   if (!process.env[env]) {
     console.error(`Lỗi: Biến môi trường ${env} không được định nghĩa trong .env`);
