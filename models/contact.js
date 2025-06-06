@@ -22,6 +22,11 @@ const contactSchema = new mongoose.Schema({
     trim: true,
     default: '',
   },
+  status: {
+    type: String,
+    enum: ['Chưa xử lý', 'Đã xử lý'],
+    default: 'Chưa xử lý',
+  },
   createdAt: {
     type: Date,
     default: Date.now,

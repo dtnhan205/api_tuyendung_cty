@@ -26,32 +26,8 @@ exports.createContact = async (req, res) => {
 
 exports.getAllContacts = async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const skip = (page - 1) * limit;
-
-    const query = {};
-    if (req.query.search) {
-      query.$or = [
-        { fullName: { $regex: req.query.search, $options: 'i' } },
-        { email: { $regex: req.query.search, $options: 'i' } },
-        { phone: { $regex: req.query.search, $options: 'i' } },
-      ];
-    }
-
-    const contacts = await Contact.find(query)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
-
-    const total = await Contact.countDocuments(query);
-
-    res.status(200).json({
-      contacts,
-      total,
-      page,
-      totalPages: Math.ceil(total / limit),
-    });
+    const contacts = await Contact.find().sort({ createdAt: -1 });
+    res.status(200).json({ contacts, totalPages: 1 });
   } catch (error) {
     console.error('Lỗi khi lấy danh sách liên hệ:', error.message, error.stack);
     res.status(500).json({ message: 'Lỗi server khi lấy danh sách liên hệ' });
@@ -66,12 +42,42 @@ exports.getContactById = async (req, res) => {
     }
     res.status(200).json(contact);
   } catch (error) {
-    console.error('Lỗi khi lấy chi tiết liên hệ:', error.message, error.stack);
-    res.status(500).json({ message: 'Lỗi server khi lấy chi tiết liên hệ' });
+    console.error('Lỗi khi lấy thông tin liên hệ:', error.message, error.stack);
+    res.status(500).json({ message: 'Lỗi server khi lấy thông tin liên hệ' });
   }
 };
 
-// Xóa liên hệ theo ID
+exports.updateContact = async (req, res) => {
+  try {
+    const { status } = req.body;
+    const contact = await Contact.findById(req.params.id);
+
+    if (!contact) {
+      return res.status(404).json({ message: 'Liên hệ không tồn tại' });
+    }
+
+    if (status !== 'Đã xử lý' && status !== 'Chưa xử lý') {
+      return res.status(400).json({ message: 'Trạng thái không hợp lệ. Chỉ cho phép "Chưa xử lý" hoặc "Đã xử lý".' });
+    }
+
+    if (contact.status === 'Đã xử lý') {
+      return res.status(400).json({ message: 'Liên hệ đã được xử lý, không thể cập nhật lại trạng thái.' });
+    }
+
+    if (status === 'Đã xử lý' && contact.status === 'Chưa xử lý') {
+      contact.status = status;
+    } else {
+      return res.status(400).json({ message: 'Chỉ có thể cập nhật trạng thái từ "Chưa xử lý" thành "Đã xử lý".' });
+    }
+
+    await contact.save();
+    res.status(200).json({ message: 'Cập nhật trạng thái thành công', contact });
+  } catch (error) {
+    console.error('Lỗi khi cập nhật trạng thái liên hệ:', error.message, error.stack);
+    res.status(500).json({ message: 'Lỗi server khi cập nhật trạng thái liên hệ' });
+  }
+};
+
 exports.deleteContact = async (req, res) => {
   try {
     const contact = await Contact.findById(req.params.id);

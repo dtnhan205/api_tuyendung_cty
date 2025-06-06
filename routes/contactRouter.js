@@ -26,6 +26,8 @@ router.post('/', contactController.createContact);
 
 router.get('/', authAdmin, contactController.getAllContacts);
 router.get('/:id', authAdmin, contactController.getContactById);
+router.put('/:id', authAdmin, contactController.updateContact);
 router.delete('/:id', authAdmin, contactController.deleteContact);
+
 
 module.exports = router;
