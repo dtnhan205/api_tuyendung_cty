@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const newsController = require('../controllers/newsController');
+const newsController = require('../controllers/newController');
 const jwt = require('jsonwebtoken');
 const Admin = require('../models/admin');
 const { upload, handleMulterError } = require('../middlewares/upload');
