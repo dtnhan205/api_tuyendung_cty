@@ -25,10 +25,9 @@ const authAdmin = async (req, res, next) => {
 };
 
 router.get('/', newsController.getAllNews);
-
+router.get('/category/:category', newsController.getNewsByCategory); // Thêm endpoint mới
 router.get('/:slug', newsController.getNewsById);
-
-router.get('/hottest', newsController.getHottestNews); 
+router.get('/hottest', newsController.getHottestNews);
 router.post(
     '/',
     authAdmin,
@@ -39,20 +38,17 @@ router.post(
     handleMulterError,
     newsController.createNews
 );
-
 router.put(
-  '/:slug',
-  authAdmin,
-  upload.fields([
-    { name: 'thumbnail', maxCount: 1 },
-    { name: 'contentImages' },
-  ]),
-  handleMulterError,
-  newsController.updateNews
+    '/:slug',
+    authAdmin,
+    upload.fields([
+        { name: 'thumbnail', maxCount: 1 },
+        { name: 'contentImages' },
+    ]),
+    handleMulterError,
+    newsController.updateNews
 );
-
 router.delete('/:slug', authAdmin, newsController.deleteNews);
-
 router.put('/:slug/toggle-visibility', authAdmin, newsController.toggleNewsVisibility);
 
 module.exports = router;

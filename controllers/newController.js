@@ -80,7 +80,37 @@ exports.getHottestNews = async (req, res) => {
     res.status(500).json({ message: 'Lỗi server khi lấy danh sách bài đăng hot', error: error.message });
   }
 };
+// Lấy tin tức theo category
+exports.getNewsByCategory = async (req, res) => {
+  try {
+    const { category } = req.params;
+    const limit = parseInt(req.query.limit) || 0;
 
+    // Kiểm tra category hợp lệ
+    if (!['news', 'interview_tip'].includes(category)) {
+      return res.status(400).json({ error: 'Category phải là "news" hoặc "interview_tip"' });
+    }
+
+    let query = News.find({ category, status: 'show' }).sort({ publishedAt: -1 });
+
+    if (limit > 0) {
+      query = query.limit(limit);
+    }
+
+    const newsList = await query;
+
+    if (newsList.length === 0) {
+      return res.status(404).json({ message: `Không tìm thấy bài viết nào trong danh mục ${category}` });
+    }
+
+    res.json({
+      message: `Lấy danh sách bài viết trong danh mục ${category} thành công`,
+      news: newsList,
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Lỗi server khi lấy danh sách bài viết', error: error.message });
+  }
+};
 // Tạo tin tức mới
 exports.createNews = async (req, res) => {
   try {
@@ -91,6 +121,7 @@ exports.createNews = async (req, res) => {
       publishedAt,
       views,
       status,
+      category, // Thêm category vào destructuring
       contentBlocks: rawContentBlocks,
     } = req.body;
 
@@ -100,7 +131,6 @@ exports.createNews = async (req, res) => {
     }
     const thumbnailUrl = `/images/${thumbnail.filename}`;
 
-    // Tạo id tự động bằng cách sử dụng _id của MongoDB
     const newId = new mongoose.Types.ObjectId().toString();
 
     let contentBlocks = [];
@@ -120,7 +150,6 @@ exports.createNews = async (req, res) => {
       contentBlocks = [];
     }
 
-    // Xử lý contentImages
     const contentImages = req.files && req.files['contentImages'] ? req.files['contentImages'] : [];
     const uploadedImages = contentImages.map(file => ({
       type: 'image',
@@ -129,16 +158,16 @@ exports.createNews = async (req, res) => {
     }));
 
     let imageIndex = 0;
- constantemente finalContentBlocks = contentBlocks.map(block => {
+    const finalContentBlocks = contentBlocks.map(block => {
       if (block.type === 'image') {
         if (block.url && !block.url.startsWith('blob:') && !block.url.includes('placeholder')) {
-          return block; // Giữ nguyên block nếu đã có URL hợp lệ
+          return block;
         }
         if (imageIndex < uploadedImages.length) {
           return {
             ...uploadedImages[imageIndex++],
             caption: block.caption || '',
-          }; // Sử dụng file mới nếu có
+          };
         }
         return res.status(400).json({ error: 'Block image thiếu file hoặc url hợp lệ' });
       }
@@ -155,6 +184,11 @@ exports.createNews = async (req, res) => {
       finalContentBlocks.push(uploadedImages[imageIndex++]);
     }
 
+    // Kiểm tra category hợp lệ
+    if (!['news', 'interview_tip'].includes(category)) {
+      return res.status(400).json({ error: 'Category phải là "news" hoặc "interview_tip"' });
+    }
+
     const newNews = new News({
       id: newId,
       title,
@@ -164,6 +198,7 @@ exports.createNews = async (req, res) => {
       publishedAt: new Date(publishedAt),
       views: parseInt(views, 10) || 0,
       status: status || 'show',
+      category: category || 'news', // Sử dụng category từ request hoặc mặc định là 'news'
       contentBlocks: finalContentBlocks,
     });
 
@@ -192,6 +227,7 @@ exports.updateNews = async (req, res) => {
     publishedAt,
     views,
     status,
+    category, // Thêm category
     contentBlocks: rawContentBlocks,
   } = req.body;
 
@@ -200,7 +236,6 @@ exports.updateNews = async (req, res) => {
 
     if (!Array.isArray(contentBlocks)) contentBlocks = [];
 
-    // Xử lý contentImages
     const files = req.files || {};
     const thumbnail = files['thumbnail'] && files['thumbnail'].length > 0 ? files['thumbnail'][0] : null;
     const contentImages = files['contentImages'] && Array.isArray(files['contentImages']) ? files['contentImages'] : [];
@@ -215,13 +250,13 @@ exports.updateNews = async (req, res) => {
     const finalContentBlocks = contentBlocks.map(block => {
       if (block.type === 'image') {
         if (block.url && !block.url.startsWith('blob:') && !block.url.includes('placeholder')) {
-          return block; // Giữ nguyên block nếu đã có URL hợp lệ
+          return block;
         }
         if (imageIndex < uploadedImages.length) {
           return {
             ...uploadedImages[imageIndex++],
             caption: block.caption || '',
-          }; // Sử dụng file mới nếu có
+          };
         }
         return res.status(400).json({ error: 'Block image thiếu file hoặc url hợp lệ' });
       }
@@ -237,16 +272,22 @@ exports.updateNews = async (req, res) => {
 
     const finalThumbnailUrl = thumbnail ? `/images/${thumbnail.filename}` : (thumbnailUrl || '');
 
+    // Kiểm tra category hợp lệ
+    if (category && !['news', 'interview_tip'].includes(category)) {
+      return res.status(400).json({ error: 'Category phải là "news" hoặc "interview_tip"' });
+    }
+
     const updatedNews = await News.findOneAndUpdate(
       { slug },
       {
         title,
-        slug: newSlug || slug, // Sử dụng newSlug nếu được cung cấp, nếu không giữ nguyên slug cũ
+        slug: newSlug || slug,
         thumbnailUrl: finalThumbnailUrl,
         thumbnailCaption: thumbnailCaption || '',
         publishedAt: publishedAt ? new Date(publishedAt) : undefined,
         views: parseInt(views, 10) || 0,
         status: status || 'show',
+        category: category || 'news', // Sử dụng category từ request hoặc mặc định là 'news'
         contentBlocks: finalContentBlocks,
       },
       { new: true, runValidators: true }

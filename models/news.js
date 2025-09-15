@@ -10,6 +10,12 @@ const newsSchema = new mongoose.Schema({
   views: { type: Number, default: 0, min: 0 },
   status: { type: String, enum: ['hidden', 'show'], default: 'show' },
   createdAt: { type: Date, default: Date.now },
+  category: { 
+    type: String, 
+    enum: ['news', 'interview_tip'], 
+    default: 'news', 
+    required: true 
+  }, // Thêm trường category
   contentBlocks: [{
     type: { type: String, enum: ['text', 'image'], required: true },
     content: { type: String, default: '', trim: true },
