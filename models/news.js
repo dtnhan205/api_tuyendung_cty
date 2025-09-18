@@ -1,5 +1,4 @@
 const mongoose = require('mongoose');
-
 const newsSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true, trim: true },
   title: { type: String, required: true, trim: true },
@@ -12,11 +11,12 @@ const newsSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
   category: { 
     type: String, 
-    enum: ['news', 'interview_tip'], 
+    enum: ['news', 'interview_tip' , 'project'], 
     default: 'news', 
     required: true 
-  }, // Thêm trường category
-  contentBlocks: [{
+  },
+  contentHtml: { type: String, default: '', trim: true }, // Thêm trường mới cho HTML từ SunEditor
+  contentBlocks: [{ // Giữ lại cho backward compatibility
     type: { type: String, enum: ['text', 'image'], required: true },
     content: { type: String, default: '', trim: true },
     url: { type: String, default: '', trim: true },
