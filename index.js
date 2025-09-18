@@ -85,7 +85,7 @@ app.use((err, req, res, next) => {
   res.status(500).json(errorResponse);
 });
 
-const PORT = process.env.PORT || 10000;
+const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || 'localhost';
 app.listen(PORT, HOST, () => {
   console.log(`Server đang chạy tại http://${HOST}:${PORT}`);
