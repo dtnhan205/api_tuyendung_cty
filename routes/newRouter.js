@@ -31,7 +31,7 @@ router.get('/:slug', newsController.getNewsById);
 router.get('/hottest', newsController.getHottestNews);
 router.post(
   '/',
-  // authAdmin,
+  authAdmin,
   upload.fields([
     { name: 'thumbnail', maxCount: 1 },
     { name: 'contentImages' },
@@ -41,7 +41,7 @@ router.post(
 );
 router.put(
   '/:slug',
-  // authAdmin,
+  authAdmin,
   upload.fields([
     { name: 'thumbnail', maxCount: 1 },
     { name: 'contentImages' },
