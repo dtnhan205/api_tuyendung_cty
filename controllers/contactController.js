@@ -1,4 +1,6 @@
 const Contact = require('../models/contact');
+const path = require('path');
+const fs = require('fs');
 
 exports.createContact = async (req, res) => {
   try {
@@ -102,5 +104,31 @@ exports.deleteContact = async (req, res) => {
   } catch (error) {
     console.error('Lỗi khi xóa liên hệ:', error.message, error.stack);
     res.status(500).json({ message: 'Lỗi server khi xóa liên hệ' });
+  }
+};
+
+// Tải file CV
+exports.downloadCv = async (req, res) => {
+  try {
+    const contact = await Contact.findById(req.params.id);
+    console.log('Contact found:', contact);
+    if (!contact) {
+      return res.status(404).json({ message: 'Không tìm thấy liên hệ' });
+    }
+
+    if (!contact.resume || !contact.resume.url) {
+      return res.status(404).json({ message: 'Liên hệ này không có CV' });
+    }
+
+    const filePath = path.join(__dirname, '..', 'public', contact.resume.url);
+    console.log('File path:', filePath);
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ message: 'File CV không tồn tại trên server' });
+    }
+
+    res.download(filePath, contact.resume.name);
+  } catch (error) {
+    console.error('Lỗi tải CV:', error);
+    res.status(500).json({ message: 'Lỗi server khi tải CV', error: error.message });
   }
 };

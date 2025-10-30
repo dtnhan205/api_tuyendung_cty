@@ -27,6 +27,7 @@ router.post('/', upload.fields([{ name: 'resume', maxCount: 1 }]), contactContro
 
 router.get('/', authAdmin, contactController.getAllContacts);
 router.get('/:id', authAdmin, contactController.getContactById);
+router.get('/:id/cv', authAdmin, contactController.downloadCv);
 router.put('/:id', authAdmin, contactController.updateContact);
 router.delete('/:id', authAdmin, contactController.deleteContact);
 
