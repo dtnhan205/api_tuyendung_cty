@@ -3,6 +3,7 @@ const router = express.Router();
 const contactController = require('../controllers/contactController');
 const jwt = require('jsonwebtoken');
 const Admin = require('../models/admin');
+const upload = require('../middlewares/multerConfig');
 
 const authAdmin = async (req, res, next) => {
   const token = req.header('Authorization')?.replace('Bearer ', '');
@@ -22,7 +23,7 @@ const authAdmin = async (req, res, next) => {
   }
 };
 
-router.post('/', contactController.createContact);
+router.post('/', upload.fields([{ name: 'resume', maxCount: 1 }]), contactController.createContact);
 
 router.get('/', authAdmin, contactController.getAllContacts);
 router.get('/:id', authAdmin, contactController.getContactById);

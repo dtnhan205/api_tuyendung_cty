@@ -8,11 +8,23 @@ exports.createContact = async (req, res) => {
       return res.status(400).json({ message: 'Họ và tên và email là bắt buộc' });
     }
 
+    const cvFile = req.files && req.files['resume'] ? req.files['resume'][0] : null;
+    let resume = null;
+    if (cvFile) {
+      resume = {
+        name: cvFile.originalname,
+        type: cvFile.mimetype,
+        size: cvFile.size,
+        url: `/cv/${cvFile.filename}`
+      };
+    }
+
     const newContact = new Contact({
       fullName,
       email,
-      phone: phone || '',   
+      phone: phone || '',
       message: message || '',
+      resume
     });
 
     await newContact.save();

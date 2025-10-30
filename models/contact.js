@@ -22,6 +22,12 @@ const contactSchema = new mongoose.Schema({
     trim: true,
     default: '',
   },
+  resume: {
+    name: { type: String },
+    type: { type: String },
+    size: { type: Number },
+    url: { type: String }
+  },
   status: {
     type: String,
     enum: ['Chưa xử lý', 'Đã xử lý'],
