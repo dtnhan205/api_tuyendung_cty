@@ -1,33 +1,36 @@
+// middlewares/multerConfig.js
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-const imageUploadDir = path.join(__dirname, '../public/images');
-if (!fs.existsSync(imageUploadDir)) {
-  fs.mkdirSync(imageUploadDir, { recursive: true });
-}
+// Tạo thư mục nếu chưa có
+const publicDir = path.join(__dirname, '..', 'public');
+const imageUploadDir = path.join(publicDir, 'images');
+const cvUploadDir = path.join(publicDir, 'cv');
 
-const cvUploadDir = path.join(__dirname, '../public/cv');
-if (!fs.existsSync(cvUploadDir)) {
-  fs.mkdirSync(cvUploadDir, { recursive: true });
-  fs.chmodSync(cvUploadDir, 0o755); 
-}
+[publicDir, imageUploadDir, cvUploadDir].forEach(dir => {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+});
 
+// Cấu hình storage
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     if (file.fieldname === 'resume') {
-      cb(null, cvUploadDir); 
+      cb(null, cvUploadDir);
     } else {
       cb(null, imageUploadDir);
     }
   },
   filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
     cb(null, uniqueSuffix + path.extname(file.originalname));
-  },
+  }
 });
 
-const checkFile = (req, file, cb) => {
+// File filter
+const fileFilter = (req, file, cb) => {
   if (file.fieldname === 'resume') {
     if (file.mimetype === 'application/pdf') {
       cb(null, true);
@@ -35,29 +38,33 @@ const checkFile = (req, file, cb) => {
       cb(new Error('Chỉ hỗ trợ file PDF cho CV!'), false);
     }
   } else {
-    const allowedMimeTypes = [
-      'image/jpeg',
-      'image/jpg',
-      'image/png',
-      'image/gif',
-      'image/webp',
-      'image/svg+xml',
-    ];
-    const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'];
-
-    const extname = allowedExtensions.includes(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedMimeTypes.includes(file.mimetype);
-
-    if (extname && mimetype) {
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
+    const ext = path.extname(file.originalname).toLowerCase();
+    const allowedExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'];
+    
+    if (allowedTypes.includes(file.mimetype) && allowedExts.includes(ext)) {
       cb(null, true);
     } else {
-      cb(new Error('Chỉ hỗ trợ file ảnh (jpg, jpeg, png, gif, webp, svg)'));
+      cb(new Error('Chỉ hỗ trợ ảnh: jpg, jpeg, png, gif, webp, svg'), false);
     }
   }
 };
 
-module.exports = multer({
+// Multer instance
+const upload = multer({
   storage,
-  fileFilter: checkFile,
-  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter,
+  limits: { fileSize: 10 * 1024 * 1024 } // 10MB
 });
+
+// Xử lý lỗi Multer
+const handleMulterError = (err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    return res.status(400).json({ message: `Lỗi upload: ${err.message}` });
+  } else if (err) {
+    return res.status(400).json({ message: err.message });
+  }
+  next();
+};
+
+module.exports = { upload, handleMulterError };

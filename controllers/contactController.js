@@ -1,3 +1,4 @@
+// controllers/contactController.js
 const Contact = require('../models/contact');
 const path = require('path');
 const fs = require('fs');
@@ -10,14 +11,15 @@ exports.createContact = async (req, res) => {
       return res.status(400).json({ message: 'Họ và tên và email là bắt buộc' });
     }
 
-    const cvFile = req.files && req.files['resume'] ? req.files['resume'][0] : null;
+    const cvFile = req.files?.resume?.[0] || null;
     let resume = null;
+
     if (cvFile) {
       resume = {
         name: cvFile.originalname,
         type: cvFile.mimetype,
         size: cvFile.size,
-        url: `/cv/${cvFile.filename}`
+        url: `cv/${cvFile.filename}` // BỎ / ĐẦU → quan trọng!
       };
     }
 
@@ -30,10 +32,9 @@ exports.createContact = async (req, res) => {
     });
 
     await newContact.save();
-
     res.status(201).json({ message: 'Gửi liên hệ thành công', contact: newContact });
   } catch (error) {
-    console.error('Lỗi khi gửi liên hệ:', error.message, error.stack);
+    console.error('Lỗi khi gửi liên hệ:', error);
     res.status(500).json({ message: 'Lỗi server khi gửi liên hệ' });
   }
 };
@@ -41,23 +42,21 @@ exports.createContact = async (req, res) => {
 exports.getAllContacts = async (req, res) => {
   try {
     const contacts = await Contact.find().sort({ createdAt: -1 });
-    res.status(200).json({ contacts, totalPages: 1 });
+    res.status(200).json({ contacts, total: contacts.length });
   } catch (error) {
-    console.error('Lỗi khi lấy danh sách liên hệ:', error.message, error.stack);
-    res.status(500).json({ message: 'Lỗi server khi lấy danh sách liên hệ' });
+    console.error('Lỗi khi lấy danh sách:', error);
+    res.status(500).json({ message: 'Lỗi server' });
   }
 };
 
 exports.getContactById = async (req, res) => {
   try {
     const contact = await Contact.findById(req.params.id);
-    if (!contact) {
-      return res.status(404).json({ message: 'Liên hệ không tồn tại' });
-    }
+    if (!contact) return res.status(404).json({ message: 'Liên hệ không tồn tại' });
     res.status(200).json(contact);
   } catch (error) {
-    console.error('Lỗi khi lấy thông tin liên hệ:', error.message, error.stack);
-    res.status(500).json({ message: 'Lỗi server khi lấy thông tin liên hệ' });
+    console.error('Lỗi:', error);
+    res.status(500).json({ message: 'Lỗi server' });
   }
 };
 
@@ -65,70 +64,82 @@ exports.updateContact = async (req, res) => {
   try {
     const { status } = req.body;
     const contact = await Contact.findById(req.params.id);
+    if (!contact) return res.status(404).json({ message: 'Liên hệ không tồn tại' });
 
-    if (!contact) {
-      return res.status(404).json({ message: 'Liên hệ không tồn tại' });
-    }
-
-    if (status !== 'Đã xử lý' && status !== 'Chưa xử lý') {
-      return res.status(400).json({ message: 'Trạng thái không hợp lệ. Chỉ cho phép "Chưa xử lý" hoặc "Đã xử lý".' });
+    if (!['Chưa xử lý', 'Đã xử lý'].includes(status)) {
+      return res.status(400).json({ message: 'Trạng thái không hợp lệ' });
     }
 
     if (contact.status === 'Đã xử lý') {
-      return res.status(400).json({ message: 'Liên hệ đã được xử lý, không thể cập nhật lại trạng thái.' });
+      return res.status(400).json({ message: 'Liên hệ đã xử lý, không thể cập nhật' });
     }
 
-    if (status === 'Đã xử lý' && contact.status === 'Chưa xử lý') {
+    if (status === 'Đã xử lý') {
       contact.status = status;
-    } else {
-      return res.status(400).json({ message: 'Chỉ có thể cập nhật trạng thái từ "Chưa xử lý" thành "Đã xử lý".' });
+      await contact.save();
+      return res.status(200).json({ message: 'Cập nhật thành công', contact });
     }
 
-    await contact.save();
-    res.status(200).json({ message: 'Cập nhật trạng thái thành công', contact });
+    res.status(400).json({ message: 'Chỉ có thể chuyển từ "Chưa xử lý" sang "Đã xử lý"' });
   } catch (error) {
-    console.error('Lỗi khi cập nhật trạng thái liên hệ:', error.message, error.stack);
-    res.status(500).json({ message: 'Lỗi server khi cập nhật trạng thái liên hệ' });
+    console.error('Lỗi cập nhật:', error);
+    res.status(500).json({ message: 'Lỗi server' });
   }
 };
 
 exports.deleteContact = async (req, res) => {
   try {
     const contact = await Contact.findById(req.params.id);
-    if (!contact) {
-      return res.status(404).json({ message: 'Liên hệ không tồn tại' });
+    if (!contact) return res.status(404).json({ message: 'Liên hệ không tồn tại' });
+
+    // Xóa file CV nếu có
+    if (contact.resume?.url) {
+      const filePath = path.join(__dirname, '..', 'public', contact.resume.url);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
     }
 
     await contact.deleteOne();
-    res.status(200).json({ message: 'Xóa liên hệ thành công' });
+    res.status(200).json({ message: 'Xóa thành công' });
   } catch (error) {
-    console.error('Lỗi khi xóa liên hệ:', error.message, error.stack);
-    res.status(500).json({ message: 'Lỗi server khi xóa liên hệ' });
+    console.error('Lỗi xóa:', error);
+    res.status(500).json({ message: 'Lỗi server' });
   }
 };
 
-// Tải file CV
+// TẢI CV - ĐÃ SỬA HOÀN TOÀN
 exports.downloadCv = async (req, res) => {
   try {
     const contact = await Contact.findById(req.params.id);
-    console.log('Contact found:', contact);
-    if (!contact) {
-      return res.status(404).json({ message: 'Không tìm thấy liên hệ' });
+    if (!contact || !contact.resume?.url) {
+      return res.status(404).json({ message: 'Không tìm thấy CV' });
     }
 
-    if (!contact.resume || !contact.resume.url) {
-      return res.status(404).json({ message: 'Liên hệ này không có CV' });
-    }
+    const filePath = path.resolve(__dirname, '..', 'public', contact.resume.url);
 
-    const filePath = path.join(__dirname, '..', 'public', contact.resume.url);
-    console.log('File path:', filePath);
+    // Kiểm tra file tồn tại
     if (!fs.existsSync(filePath)) {
       return res.status(404).json({ message: 'File CV không tồn tại trên server' });
     }
 
-    res.download(filePath, contact.resume.name);
+    // Bảo mật: không cho truy cập ngoài thư mục public
+    const publicDir = path.resolve(__dirname, '..', 'public');
+    if (!filePath.startsWith(publicDir)) {
+      return res.status(403).json({ message: 'Truy cập bị từ chối' });
+    }
+
+    // Gửi file
+    res.download(filePath, contact.resume.name, (err) => {
+      if (err) {
+        console.error('Lỗi gửi file:', err);
+        if (!res.headersSent) {
+          res.status(500).json({ message: 'Lỗi khi tải file' });
+        }
+      }
+    });
   } catch (error) {
     console.error('Lỗi tải CV:', error);
-    res.status(500).json({ message: 'Lỗi server khi tải CV', error: error.message });
+    res.status(500).json({ message: 'Lỗi server' });
   }
 };
